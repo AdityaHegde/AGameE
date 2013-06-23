@@ -1,0 +1,91 @@
+<html>
+  <head>
+    <script type="text/javascript" src="/js/glMatrix-0.9.5.min.js"></script>
+    <script type="text/javascript" src="/js/webgl-utils.js"></script>
+    <script type="text/javascript" src="/js/utils.js"></script>
+    <script type="text/javascript" src="/js/core.js"></script>
+    <script type="text/javascript" src="/js/physics.js"></script>
+    <script type="text/javascript" src="/js/objects.js"></script>
+    <script type="text/javascript" src="/js/buildScene.js"></script>
+    <style>
+      .main-container {
+        
+      }
+      .game-window {
+        margin-left:auto;
+        margin-right:auto;
+        width: 800px;
+      }
+      #game-canvas {
+        border: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="main-container">
+      <div class="game-window">
+        <canvas id="game-canvas" width="800" height="600"></canvas>
+      </div>
+    </div>
+    <script type="text/javascript">
+      //var canvas = document.getElementById("game-canvas");
+      //canvas.width = window.screen.width;
+      //canvas.height = window.screen.height;
+      var
+      scene = new AGameE.Scene({
+        entities : AGameE.BuildScene({
+          map : [
+            [1, 1, 1, 1],
+            [1, 0, 0, 1],
+            [1, 0, 0, 1],
+            [1, 1, 1, 1],
+          ],
+          wallTexture : "textures/brick1_1.jpg",
+          roofTexture : "textures/floor1_6.jpg",
+          floorTexture : "textures/floor1_4.jpg",
+        }),
+        light : {
+          position : [6.0, 0, 6.0],
+          color : [0.8, 0.8, 0.8],
+        },
+        playerPos : [4.0, 0.0, 4.0],
+        //motion : { v : [5.0, 5.0, 0.0], a : [0.0, 0.0, 0.0] },
+        //motion : { v : [0.0, 0.0, 0.0], a : [0.0, -9.8, 0.0] },
+        motion : { v : [0.0, 0.0, 0.0], a : [0.0, 0.0, 0.0] },
+      }),
+      sphere = new AGameE.Entity({
+        features : [
+          new AGameE.Render({
+            object : {
+              shape : 'sphere',
+              ambientColor : { r : 1.0, g : 1.0, b : 1.0},
+            },
+            texture : {
+              imageSrc : "textures/rock_floor1.jpg",
+            },
+            transform : {
+              translate : [5.0, 0.0, 5.0],
+              rotate : [0.0, 0.0, 0.0],
+              scale : [0.1, 0.1, 0.1],
+            },
+          }),
+          new AGameE.Physx({
+            motion : this.motion || {
+              v : [2.5, 1.0, 1.25], a : [0.0, -9.8, 0.0],
+              //v : [2.5, 1.0, 1.25], a : [0.0, 0.0, 0.0],
+            },
+            pos : [5.0, 0.0, 5.0],
+          }),
+        ],
+      });
+      scene.entities.push(sphere);
+      var world = new AGameE.World({
+        canvasId : "game-canvas",
+        scenes : [scene],
+        physicsEngine : {
+          e : 0.1,
+        },
+      }).init();
+    </script>
+  </body>
+</html>
