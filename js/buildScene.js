@@ -34,50 +34,54 @@
     }
 
     /* Roof */
-    entities.push(new AGameE.Entity({
-      features : [
-        new AGameE.Render({
-          object : {
-            ambientColor : { r : 0.2, g : 0.2, b : 0.2 },
-            shape : 'cube',
-          },
-          texture : {
-            imageSrc : config.roofTexture,
-          },
-          transform : {
-            translate : [config.map.length, 2.5, config.map[0].length],
-            rotate : [0.0, 0.0, 0.0],
-            scale : [config.map.length*2, 1.0, config.map[0].length*2],
-          },
-        }),
-        new AGameE.Physx({
-          fixedBody : "true",
-        }),
-      ],
-    }));
+    if(config.roofTexture) {
+      entities.push(new AGameE.Entity({
+        features : [
+          new AGameE.Render({
+            object : {
+              ambientColor : { r : 0.2, g : 0.2, b : 0.2 },
+              shape : 'cube',
+            },
+            texture : {
+              imageSrc : config.roofTexture,
+            },
+            transform : {
+              translate : [config.map.length+2, 3.0, config.map[0].length+2],
+              rotate : [0.0, 0.0, 0.0],
+              scale : [config.map.length*2, 1.0, config.map[0].length*2],
+            },
+          }),
+          new AGameE.Physx({
+            fixedBody : "true",
+          }),
+        ],
+      }));
+    }
 
     /* Floor */
-    entities.push(new AGameE.Entity({
-      features : [
-        new AGameE.Render({
-          object : {
-            ambientColor : { r : 0.2, g : 0.2, b : 0.2 },
-            shape : 'cube',
-          },
-          texture : {
-            imageSrc : config.floorTexture,
-          },
-          transform : {
-            translate : [config.map.length, -2.5, config.map[0].length],
-            rotate : [0.0, 0.0, 0.0],
-            scale : [config.map.length*2, 1.0, config.map[0].length*2],
-          },
-        }),
-        new AGameE.Physx({
-          fixedBody : "true",
-        }),
-      ],
-    }));
+    if(config.floorTexture) {
+      entities.push(new AGameE.Entity({
+        features : [
+          new AGameE.Render({
+            object : {
+              ambientColor : { r : 0.2, g : 0.2, b : 0.2 },
+              shape : 'cube',
+            },
+            texture : {
+              imageSrc : config.floorTexture,
+            },
+            transform : {
+              translate : [config.map.length+2, -3.0, config.map[0].length+2],
+              rotate : [0.0, 0.0, 0.0],
+              scale : [config.map.length*2, 1.0, config.map[0].length*2],
+            },
+          }),
+          new AGameE.Physx({
+            fixedBody : "true",
+          }),
+        ],
+      }));
+    }
 
     return entities;
 

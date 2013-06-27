@@ -5,11 +5,11 @@
     this.bodies = this.bodies || [];
 
     this.e = this.e || 1;
+    this.iters = this.iters || 1;
   }
   AGameE.APhyE = APhyE;
   AGameE.inherit(AGameE.Base, APhyE, {
     init : function(entities) {
-
     },
 
     animate : function(elapsed) {
@@ -19,9 +19,14 @@
       }
 
       for(var b in this.bodies) {
-        if(this.bodies[b].fixedBody !== "true") {
-          for(var cb in this.bodies) {
-            if(this.bodies[cb].fixedBody === "true") this.bodies[b].testCollision(this.bodies[cb]);
+        
+        for(var iters = 0; iters < this.iters; iters++) {
+          if(this.bodies[b].fixedBody !== "true") {
+            this.bodies[b].body.d.contacts = [];
+            for(var cb in this.bodies) {
+              if(this.bodies[cb].fixedBody === "true") this.bodies[b].testCollision(this.bodies[cb]);
+            }
+            this.bodies[b].resolveCollision();
           }
         }
       }
@@ -73,6 +78,10 @@
       this.body.testCollision(obj.body);
     },
 
+    resolveCollision : function() {
+      this.body.resolveCollision();
+    },
+
     type : 'Physx',
   });
 
@@ -92,6 +101,9 @@
     this.motion.tv = [0.0, 0.0, 0.0];
   }
   AGameE.RigidBody = RigidBody;
+  RigidBody.comparator = function(a, b) {
+    return a[0] - b[0];  //min heap
+  };
   AGameE.inherit(AGameE.Component, RigidBody, {
     init : function() {
       RigidBody.parent.prototype.init.call(this);
@@ -107,38 +119,44 @@
     },
 
     testCollision : function(obj) {
-      var d = 1.00001, dir = vec3.subtract(this.npos, this.pos, []), pti = [], ptr = [], cface;  //pti - intrsection point, ptr - reflection point
+      var d = 1.0, dir = vec3.subtract(this.npos, this.pos, []), pti = [], ptr = [], cface;  //pti - intrsection point, ptr - reflection point
       if(vec3.length(dir) <= 0.000001) return;
       for(var f in obj.d.f) {
-        var face = obj.d.f[f], dn = vec3.dot(dir, face.n, []), rv = vec3.scale(face.n, this.d.r, []); //rv - radius vector
+        var face = obj.d.f[f], dn = vec3.dot(dir, face.n, []), rv = vec3.scale(face.n, this.d.r, []);  //rv - radius vector
         if(dn != 0) {
           var diff = vec3.subtract(vec3.add(face.v[0], rv, []), this.pos, []), nm = vec3.dot(diff, face.n, []), d1 = nm / dn;
           if(d1 < d && d1 >= 0) {
-            vec3.add(this.pos, vec3.scale(dir, d1, ptr), ptr);
-            vec3.add(ptr, vec3.negate(rv, []), pti);
-            var isWithin = 1;
-            for(var v = 0; v < face.v.length; v++) {
-              var v1 = vec3.subtract(face.v[(v+1)%face.v.length], face.v[v], []), v2 = vec3.subtract(pti, face.v[v], []), v3 = vec3.subtract(face.v[(v+2)%face.v.length], face.v[v], []),
-                  v11 = vec3.normalize(vec3.cross(v1, v2, [])), v12 = vec3.normalize(vec3.cross(v1, v3, []));
-              if(Math.abs(v11[0] - v12[0]) > 0.00001 || Math.abs(v11[1] - v12[1]) > 0.00001 || Math.abs(v11[2] - v12[2]) > 0.00001) {
-                isWithin = 0;
-              }
-            }
-            if(isWithin === 1) {
-              d = d1;
-              cface = face;
-            }
+            heap.insert(this.d.contacts, [d1, face], RigidBody.comparator);
           }
         }
       }
-      if(d <= 1.0) {
-        var proj = [], v = [], reflPt = [], ndir = phyE.reflect(dir, cface.n);
-        vec3.normalize(ndir);
-        vec3.add(ptr, vec3.scale(ndir, (1 - d)*vec3.length(dir)), this.npos);
+    },
 
-        if(vec3.length(this.motion.v) > 0.0) this.motion.v = phyE.reflect(this.motion.v, cface.n);
+    resolveCollision : function() {
+      var c = heap.delete(this.d.contacts, RigidBody.comparator);
+      while(c[0] !== "null") {
+        var ptr = [], pti = [], dir = vec3.subtract(this.npos, this.pos, []), rv = vec3.scale(c[1].n, this.d.r, []);
+        vec3.add(this.pos, vec3.scale(dir, c[0], ptr), ptr);
+        vec3.add(ptr, vec3.negate(rv, []), pti);
+        var isWithin = 1;
+        for(var v = 0; v < c[1].v.length; v++) {
+          var v1 = vec3.subtract(c[1].v[(v+1)%c[1].v.length], c[1].v[v], []), v2 = vec3.subtract(pti, c[1].v[v], []), v3 = vec3.subtract(c[1].v[(v+2)%c[1].v.length], c[1].v[v], []),
+              v11 = vec3.normalize(vec3.cross(v1, v2, [])), v12 = vec3.normalize(vec3.cross(v1, v3, []));
+          if(Math.abs(v11[0] - v12[0]) > 0.00001 || Math.abs(v11[1] - v12[1]) > 0.00001 || Math.abs(v11[2] - v12[2]) > 0.00001) {
+            isWithin = 0;
+          }
+        }
+        if(isWithin === 1) {
+          var ndir = phyE.reflect(dir, c[1].n);
+          vec3.normalize(ndir);
+          vec3.add(ptr, vec3.scale(ndir, (1 - c[0])*vec3.length(dir)), this.npos);
+          this.pos = ptr;
 
-        obj.fire("collide", {src : this});
+          if(vec3.length(this.motion.v) > 0.0) this.motion.v = phyE.reflect(this.motion.v, c[1].n);
+
+          break;
+        }
+        c = heap.delete(this.d.contacts, RigidBody.comparator);
       }
     },
 
@@ -174,6 +192,8 @@
     },
 
     testCollision : function(obj) {},
+
+    resolveCollision : function() {},
   });
 
 
