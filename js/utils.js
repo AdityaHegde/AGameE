@@ -70,3 +70,7 @@ window.heap = {
     return b - a;
   },
 };
+
+vec3.angle = function (a, b) {
+  return Math.acos(vec3.dot(a, b)/(vec3.length(a)*vec3.length(b)));
+};

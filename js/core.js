@@ -402,7 +402,10 @@ lastTime = 0;
         this.features[f].entity = this;
         this.features[f].init();
       }
-      if(this.featureLink.Render) this.d = this.featureLink.Render.getDimension();
+      if(this.featureLink.Render) {
+        this.shape = this.featureLink.Render.shape;
+        this.d = this.featureLink.Render.getDimension();
+      }
     },
 
     animate : function(elapsed) {
@@ -449,7 +452,9 @@ lastTime = 0;
   AGameE.inherit(Base, Feature, {
 
     init : function() {
+      this.componentLink = {};
       for(var c in this.components) {
+        if(this.components[c].type) this.componentLink[this.components[c].type] = this.components[c];
         this.components[c].feature = this;
         this.components[c].init();
       }

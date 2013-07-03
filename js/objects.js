@@ -73,10 +73,14 @@
 
     initTexture : function() {
       gl.bindTexture(gl.TEXTURE_2D, this.texture);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.texture.image);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+      //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.texture.image);
       gl.bindTexture(gl.TEXTURE_2D, null);
     },
 
@@ -85,6 +89,8 @@
       gl.bindTexture(gl.TEXTURE_2D, this.texture);
       gl.uniform1i(shaderProgram.samplerUniform, 0);
     },
+
+    type : "Texture",
 
   });
 
@@ -134,6 +140,8 @@
       }
     },
 
+    type : "Transform",
+
   });
 
 
@@ -160,6 +168,7 @@
         this.normal = objects[this.shape].data.normal;
         this.texCoords = objects[this.shape].data.texCoords;
         this.indices = objects[this.shape].data.indices;
+        objects[this.shape].postInit.call(this);
       }
 
       this.vertexPosBuffer = AGameE.createBuffer(this.vertices, 'array', 3, this.vertices.length/3);
@@ -202,8 +211,7 @@
       objects[this.shape].getDimension(this, d);
     },
 
-    type : 'Render',
-
+    type : "Render",
 
   });
 
@@ -259,14 +267,41 @@
       getDimension : function(obj, d) {
 
         d.f = d.f || [];
+        d.e = d.e || [];
+        d.v = d.v || [];
+
+        function addEdge(edges, edge) {
+          for(var e in edges) {
+            if((vec3.length(vec3.subtract(edge[0], edges[e].v[0], [])) === 0 && vec3.length(vec3.subtract(edge[1], edges[e].v[1], [])) === 0) || 
+               (vec3.length(vec3.subtract(edge[0], edges[e].v[1], [])) === 0 && vec3.length(vec3.subtract(edge[1], edges[e].v[0], [])) === 0)) {
+              return;
+            }
+          }
+          edges.push({v : [vec3.create(edge[0]),vec3.create(edge[1])], e : vec3.subtract(edge[1], edge[0], [])});
+        }
+
+        function addVertex(vertices, vertex) {
+          for(var v in vertices) {
+            if(vec3.length(vec3.subtract(vertex, vertices[v], [])) === 0) return
+          }
+          vertices.push(vec3.create(vertex));
+        }
 
         var i = 0, j = 0, lastNormal;
         for(var n = 0; n < obj.normal.length; n += 3) {
           var normal = [obj.normal[n], obj.normal[n+1], obj.normal[n+2]];
           if(lastNormal && Math.abs(vec3.length(vec3.subtract(normal, lastNormal, []))) > 0.0001) {
-            var face = {v : [], n : lastNormal};
+            var face = {v : [], n : lastNormal}, lv, v;
             for(var k = j; k < i; k++) {
-              face.v.push([obj.vertices[3*k], obj.vertices[3*k + 1], obj.vertices[3*k + 2]]);
+              lv = v;
+              v = [obj.vertices[3*k], obj.vertices[3*k + 1], obj.vertices[3*k + 2]]
+              face.v.push(v);
+              if(d.e.length < 12 && lv) {
+                addEdge(d.e, [v, lv]);
+              }
+              if(d.v.length < 8) {
+                addVertex(d.v, v);
+              }
             }
             d.f.push(face);
             j = i;
@@ -275,9 +310,17 @@
           lastNormal = normal;
         }
         if(lastNormal) {
-          var face = {v : [], n : lastNormal};
+          var face = {v : [], n : lastNormal}, lv, v;
           for(var k = j; k < i; k++) {
-            face.v.push([obj.vertices[3*k], obj.vertices[3*k + 1], obj.vertices[3*k + 2]]);
+            lv = v;
+            v = [obj.vertices[3*k], obj.vertices[3*k + 1], obj.vertices[3*k + 2]]
+            face.v.push(v);
+            if(d.e.length < 12 && lv) {
+              addEdge(d.e, [v, lv]);
+            }
+            if(d.v.length < 8) {
+              addVertex(d.v, v);
+            }
           }
           d.f.push(face);
         }
@@ -301,6 +344,39 @@
           vec3.normalize(d.f[f].n);
         }
 
+        for(var e in d.e) {
+          mat4.multiplyVec3(mat, d.e[e].v[0]);
+          mat4.multiplyVec3(mat, d.e[e].v[1]);
+          mat4.multiplyVec3(mat, d.e[e].e);
+        }
+
+        for(var v in d.v) {
+          mat4.multiplyVec3(mat, d.v[v]);
+        }
+
+      },
+
+      postInit : function() {
+        var tex = [], rotateMat = [], mat = mat4.identity([]);
+        for(var i = 0; i < this.texCoords.length; i += 2) {
+          var v = [this.texCoords[i], this.texCoords[i + 1], (i < this.texCoords.length/2 ? 1:-1)], j = 3*i/2,
+              nv = [this.normal[j], this.normal[j + 1], this.normal[j + 2]];
+              rm = mat4.identity([]), rmi = mat4.identity([]);
+          mat4.rotate(rm, vec3.angle([0, 0, 1], nv), vec3.cross([0, 0, 1], nv, []));
+          mat4.inverse(rm, rmi);
+          mat4.multiplyVec3(rm, v);
+          tex.push(v);
+          rotateMat.push(rmi);
+        }
+        mat4.scale(mat, this.feature.componentLink.Transform.scale);
+
+        this.texCoords = [];
+        for(var j in tex) {
+          mat4.multiplyVec3(mat, tex[j]);
+          mat4.multiplyVec3(rotateMat[j], tex[j]);
+          this.texCoords.push(tex[j][0]);
+          this.texCoords.push(tex[j][1]);
+        }
       },
 
     },
