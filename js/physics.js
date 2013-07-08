@@ -91,13 +91,13 @@
 
   var id = 0, objectsMap = {
 
-    cube : {
+    polyhedron : {
 
     },
 
     sphere : {
 
-      cube : {
+      polyhedron : {
 
         testCollision : function(obj, dir) {
           var d = 1.00001;  //pti - intrsection point, ptr - reflection point
@@ -106,7 +106,50 @@
             if(dn != 0) {
               var diff = vec3.subtract(vec3.add(face.v[0], rv, []), this.pos, []), nm = vec3.dot(diff, face.n, []), d1 = nm / dn;
               if(d1 < d && d1 >= 0) {
-                heap.insert(this.d.contacts, [d1, face, "face"], RigidBody.comparator);
+                var ptr = [], pti = [], dir = vec3.subtract(this.npos, this.pos, []),
+                    rv = vec3.scale(face.n, this.d.r, []), isWithin = 1;
+                vec3.add(this.pos, vec3.scale(dir, d1, ptr), ptr);
+                vec3.add(ptr, vec3.negate(rv, []), pti);
+
+                /* Check for face collision first */
+
+                for(var v = 0; v < face.v.length; v++) {
+                  var ni = (v+1)%face.v.length, 
+                      v1 = vec3.subtract(face.v[ni], face.v[v], []), v2 = vec3.subtract(pti, face.v[v], []), v3 = vec3.subtract(face.v[(v+2)%face.v.length], face.v[v], []),
+                      v11 = vec3.normalize(vec3.cross(v1, v2, [])), v12 = vec3.normalize(vec3.cross(v1, v3, []));
+                  if(Math.abs(v11[0] - v12[0]) > 0.00001 || Math.abs(v11[1] - v12[1]) > 0.00001 || Math.abs(v11[2] - v12[2]) > 0.00001) {
+                    isWithin = 0;
+
+                    /* Check for collision with edge */
+
+                    var dd = line.perpPointFromLine(v1, face.v[ni], dir, this.pos, this.d.r), pdd, dd1, pdd1, pter, ptei = 0;
+                    for(var i in dd) {
+                      if(dd[i][0] >= 0.0 && dd[i][0] <= 1.0 && (!pdd || pdd > dd[i][0])) {
+                        pter = dd[i][1];
+                        dd1 = line.perpPointFromPoint(v1, face.v[ni], dd[i][0]);
+                        if(dd1[0] >= 0.0 && dd1[0] <= 1.0) {
+                          pdd = dd[i][0];
+                          ptei = dd[i][1];
+                          break;
+                        }
+                      }
+                    }
+
+                    if(ptei) {
+                      var normPt = line.perpPointFromPoint(v1, face.v[ni], obj.d.c), norm = vec3.normalize(vec3.subtract(normPt, obj.d.c, []));
+                      heap.insert(this.d.contacts, [pdd, norm, pter, ptei], RigidBody.comparator);
+                    }
+                    else {
+
+                    }
+
+                    break;
+                  }
+                }
+
+                if(isWithin === 1) {
+                  heap.insert(this.d.contacts, [d1, face.n, ptr, pti], RigidBody.comparator);
+                }
               }
             }
           }
@@ -114,40 +157,19 @@
 
         resolveCollision : function() {
 
-          var resolve = {
-            face : function(c) {
-              var ptr = [], pti = [], dir = vec3.subtract(this.npos, this.pos, []), rv = vec3.scale(c[1].n, this.d.r, []);
-              vec3.add(this.pos, vec3.scale(dir, c[0], ptr), ptr);
-              vec3.add(ptr, vec3.negate(rv, []), pti);
-              var isWithin = 1;
-              for(var v = 0; v < c[1].v.length; v++) {
-                var v1 = vec3.subtract(c[1].v[(v+1)%c[1].v.length], c[1].v[v], []), v2 = vec3.subtract(pti, c[1].v[v], []), v3 = vec3.subtract(c[1].v[(v+2)%c[1].v.length], c[1].v[v], []),
-                    v11 = vec3.normalize(vec3.cross(v1, v2, [])), v12 = vec3.normalize(vec3.cross(v1, v3, []));
-                if(Math.abs(v11[0] - v12[0]) > 0.00001 || Math.abs(v11[1] - v12[1]) > 0.00001 || Math.abs(v11[2] - v12[2]) > 0.00001) {
-                  isWithin = 0;
-                }
-              }
-
-              if(isWithin === 1) return c[1].n;
-              return "false";
-            },
-          },
-          c = heap.delete(this.d.contacts, RigidBody.comparator),
-          n = "false";
+          var c = heap.delete(this.d.contacts, RigidBody.comparator);
           while(c[0] !== "null") {
-            n = resolve[c[2]].call(this, c);
-            if(n !== "false") {
-              var ndir = phyE.reflect(dir, n);
-              vec3.normalize(ndir);
-              vec3.add(ptr, vec3.scale(ndir, (1 - c[0])*vec3.length(dir)), this.npos);
-              this.pos = ptr;
+            var dir = vec3.subtract(this.npos, this.pos, []),
+                ndir = phyE.reflect(dir, c[1]);
+            vec3.normalize(ndir);
+            vec3.add(c[2], vec3.scale(ndir, (1 - c[0])*vec3.length(dir)), this.npos);
+            this.pos = c[2];
 
-              if(vec3.length(this.motion.v) > 0.0) this.motion.v = phyE.reflect(this.motion.v, n);
+            if(vec3.length(this.motion.v) > 0.0) this.motion.v = phyE.reflect(this.motion.v, c[1]);
 
-              break;
-            }
-            c = heap.delete(this.d.contacts, RigidBody.comparator);
+            break;
 
+            //c = heap.delete(this.d.contacts, RigidBody.comparator);
           }
           
         },
@@ -198,28 +220,17 @@
     resolveCollision : function() {
       var c = heap.delete(this.d.contacts, RigidBody.comparator);
       while(c[0] !== "null") {
-        var ptr = [], pti = [], dir = vec3.subtract(this.npos, this.pos, []), rv = vec3.scale(c[1].n, this.d.r, []);
-        vec3.add(this.pos, vec3.scale(dir, c[0], ptr), ptr);
-        vec3.add(ptr, vec3.negate(rv, []), pti);
-        var isWithin = 1;
-        for(var v = 0; v < c[1].v.length; v++) {
-          var v1 = vec3.subtract(c[1].v[(v+1)%c[1].v.length], c[1].v[v], []), v2 = vec3.subtract(pti, c[1].v[v], []), v3 = vec3.subtract(c[1].v[(v+2)%c[1].v.length], c[1].v[v], []),
-              v11 = vec3.normalize(vec3.cross(v1, v2, [])), v12 = vec3.normalize(vec3.cross(v1, v3, []));
-          if(Math.abs(v11[0] - v12[0]) > 0.00001 || Math.abs(v11[1] - v12[1]) > 0.00001 || Math.abs(v11[2] - v12[2]) > 0.00001) {
-            isWithin = 0;
-          }
-        }
-        if(isWithin === 1) {
-          var ndir = phyE.reflect(dir, c[1].n);
-          vec3.normalize(ndir);
-          vec3.add(ptr, vec3.scale(ndir, (1 - c[0])*vec3.length(dir)), this.npos);
-          this.pos = ptr;
+        var dir = vec3.subtract(this.npos, this.pos, []),
+            ndir = phyE.reflect(dir, c[1]);
+        vec3.normalize(ndir);
+        vec3.add(c[2], vec3.scale(ndir, (1 - c[0])*vec3.length(dir)), this.npos);
+        this.pos = c[2];
 
-          if(vec3.length(this.motion.v) > 0.0) this.motion.v = phyE.reflect(this.motion.v, c[1].n);
+        if(vec3.length(this.motion.v) > 0.0) this.motion.v = phyE.reflect(this.motion.v, c[1]);
 
-          break;
-        }
-        c = heap.delete(this.d.contacts, RigidBody.comparator);
+        break;
+
+        //c = heap.delete(this.d.contacts, RigidBody.comparator);
       }
     },
 

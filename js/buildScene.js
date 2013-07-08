@@ -13,15 +13,15 @@
               new AGameE.Render({
                 object : {
                   ambientColor : { r : 0.2, g : 0.2, b : 0.2 },
-                  shape : 'cube',
+                  shape : 'polyhedron',
                 },
                 texture : {
                   imageSrc : config.wallTexture,
                 },
                 transform : {
-                  translate : [4.0*x, 0.0, 4.0*z],
+                  translate : [2.0*x, 0.0, 2.0*z],
                   rotate : [0.0, 0.0, 0.0],
-                  scale : [2.0, 2.0, 2.0],
+                  scale : [1.0, 1.0, 1.0],
                 },
               }),
               new AGameE.Physx({
@@ -40,15 +40,15 @@
           new AGameE.Render({
             object : {
               ambientColor : { r : 0.2, g : 0.2, b : 0.2 },
-              shape : 'cube',
+              shape : 'polyhedron',
             },
             texture : {
               imageSrc : config.roofTexture,
             },
             transform : {
-              translate : [config.map.length+2, 3.0, config.map[0].length+2],
+              translate : [config.map.length/8+1, 3.0, config.map[0].length/8+1],
               rotate : [0.0, 0.0, 0.0],
-              scale : [config.map.length*2, 1.0, config.map[0].length*2],
+              scale : [config.map.length, 0.5, config.map[0].length],
             },
           }),
           new AGameE.Physx({
@@ -65,15 +65,15 @@
           new AGameE.Render({
             object : {
               ambientColor : { r : 0.2, g : 0.2, b : 0.2 },
-              shape : 'cube',
+              shape : 'polyhedron',
             },
             texture : {
               imageSrc : config.floorTexture,
             },
             transform : {
-              translate : [config.map.length+2, -3.0, config.map[0].length+2],
+              translate : [config.map.length/8+1, -3.0, config.map[0].length/8+1],
               rotate : [0.0, 0.0, 0.0],
-              scale : [config.map.length*2, 1.0, config.map[0].length*2],
+              scale : [config.map.length, 0.5, config.map[0].length],
             },
           }),
           new AGameE.Physx({
