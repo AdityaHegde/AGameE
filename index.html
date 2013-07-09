@@ -9,7 +9,6 @@
     <script type="text/javascript" src="/js/buildScene.js"></script>
     <style>
       .main-container {
-        
       }
       .game-window {
         margin-left:auto;
@@ -23,14 +22,16 @@
   </head>
   <body>
     <div class="main-container">
-      <div class="game-window">
-        <canvas id="game-canvas" width="800" height="600"></canvas>
+      <div class="page-header">
+        <!--h3>AGameE - A GAME Engine</h3-->
+      </div>
+      <div class="page-body">
+        <div class="game-window">
+          <canvas id="game-canvas" width="800" height="600"></canvas>
+        </div>
       </div>
     </div>
     <script type="text/javascript">
-      //var canvas = document.getElementById("game-canvas");
-      //canvas.width = window.screen.width;
-      //canvas.height = window.screen.height;
       var
       scene = new AGameE.Scene({
         entities : AGameE.BuildScene({
@@ -48,7 +49,7 @@
           position : [6.0, 0, 6.0],
           color : [0.8, 0.8, 0.8],
         },
-        playerPos : [4.0, 0.0, 4.0],
+        playerPos : [-4.0, 0.0, -4.0],
         //motion : { v : [5.0, 5.0, 0.0], a : [0.0, 0.0, 0.0] },
         //motion : { v : [0.0, 0.0, 0.0], a : [0.0, -9.8, 0.0] },
         motion : { v : [0.0, 0.0, 0.0], a : [0.0, 0.0, 0.0] },
@@ -78,7 +79,7 @@
           }),
         ],
       });
-      scene.entities.push(sphere);
+      //scene.entities.push(sphere);
       var world = new AGameE.World({
         canvasId : "game-canvas",
         scenes : [scene],
@@ -86,6 +87,7 @@
           e : 0.1,
         },
       }).init();
+      line.perpPointFromLine([2, 0, 0], [-1, 0, 0], [2, 1, 0], [-1, 1, 0], 1);
     </script>
   </body>
 </html>
