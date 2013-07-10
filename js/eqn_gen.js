@@ -27,7 +27,7 @@
 
 
   function Tokens(tokens) {
-    Tokens.parent.constructor.call(this, {});
+    Tokens.parent.call(this, {});
     this.tokens = tokens;
     this.cur = 0;
   }
@@ -46,10 +46,11 @@
 
 
   function Term(config) {
-    Term.parent.constructor.call(this, config);
+    Term.parent.call(this, config);
 
     if(this.terms) {
       this.type = "bracketed";
+      
     }
     else {
       this.var = this.var || "";
@@ -70,6 +71,13 @@
       }
     }
   }
+  Term.sortFun = function(a, b) {
+    if(a.terms || b.terms) return 0;
+    else if(a.var === b.var) return 0;
+    else if(a.var < b.var) return 1;
+    else if(a.var > b.var) return -1;
+    return 0;
+  };
   inherit(Base, Term, {
 
     equalTo : function(term) {
@@ -85,14 +93,38 @@
       return 0;
     },
 
-    power : function() {
-      
+    power : function(terms, pwr) {
+      var ts = [];
+      if(terms) {
+        var st = terms.pop(), mt = (terms.length === 1 ? terms.pop() : new Term({terms : terms})),
+            ncr = 1;
+        for(var i = 0; i <= pwr; i++) {
+          var sti = st.copy(), mti = mt.copy();
+          sti = sti.power((sti.terms ? sti.terms : null), pwr - i);
+          mti = mti.power((mti.terms ? mti.terms : null), i);
+          //mti.simplify();
+          var ct = new TermMultiply({terms : [], coeff : ncr});
+          for(var j = 0; j < sti.length; j++) {
+            if(sti[j].pwr > 0) ct.addTerm(sti[j]);
+          }
+          for(var j = 0; j < mti.length; j++) {
+            if(mti[j].pwr > 0) ct.addTerm(mti[j]);
+          }
+          ts.push((ct.terms.length > 1 ? ct : ct.terms.pop()));
+          ncr *= (pwr - i)/(i + 1);
+        }
+      }
+      else {
+        this.pwr = (this.pwr ? this.pwr * pwr : pwr);
+        ts = [this];
+      }
+      return ts;
     },
 
     simplify : function() {
       if(this.terms) {
         if(this.pwr) {
-          
+          this.terms = this.power(this.terms, this.pwr);
         }
         var ts = [], tsf = [];
         for(var t in this.terms) {
@@ -117,33 +149,37 @@
       }
     },
 
+    multiply : function(term) {
+      var t = TermMultiply({terms : [this]});
+      return t.multiply(term);
+    },
+
+    copy : function() {
+      var c = new Term({coeff : this.coeff, var : this.var, pwr : this.pwr, op : this.op});
+      return c;
+    },
+
   });
 
 
   function TermMultiply(config) {
-    TermMultiply.parent.constructor.call(this, config);
+    TermMultiply.parent.call(this, config);
 
     this.type = "multiTerm";
     this.terms = config.terms;
     this.terms.sort(TermMultiply.sortFun);
 
-    this.coeff = 1;
+    this.coeff = this.coeff || 1;
     for(var i = 0; i < this.terms.length; i++) {
       this.coeff *= this.terms[i].coeff;
       this.terms[i].coeff = 1;
     }
   }
-  TermMultiply.sortFun = function(a, b) {
-    if(a === b) return 0;
-    else if(a < b) return 1;
-    else if(a > b) return -1;
-    return 0;
-  };
   inherit(Term, TermMultiply, {
 
     addTerm : function(term) {
       this.terms.push(term);
-      this.terms.sort(TermMultiply.sortFun);
+      this.terms.sort(Term.sortFun);
       this.coeff *= term.coeff;
       term.coeff = 1;
     },
@@ -152,7 +188,7 @@
       if(term.terms && this.terms.length === term.terms.length) {
         for(var i = 0; i < this.terms.length; i++) {
           if(this.terms[i].equalTo(term.terms[i]) === 0) {
-            retrun 0;
+            return 0;
           }
         }
         return 1;
@@ -161,6 +197,43 @@
     },
 
     simplify : function() {
+      var ts = [], sts = [], mts = [];
+      for(var i = 0; i < this.terms.length; i++) {
+        if(!this.terms[i].type) {
+          sts.push(this.terms[i]);
+        }
+        else {
+          mts.push(this.terms[i]);
+        }
+      }
+      if(mts.length > 0) {
+        for(var i = 0; i < mts.length; i++) {
+          if(mts[i].type) {
+            var tsb = mts[i].simplify();
+            for(var j = 0; j < tsb.length; j++) {
+              var stsc = [];
+              for(var k = 0; k < sts.length; k++) {
+                stsc.push(sts[k].copy());
+              }
+              var tm = new TermMultiply({terms : stsc});
+              tm.multiply(tsb[j]);
+              ts.push(tm);
+            }
+          }
+        }
+      }
+      else {
+        ts = [this]
+      }
+      return ts;
+    },
+
+    multiply : function(term) {
+      var ts = (term.terms ? [term.terms]:[term]);
+      for(var i = 0; i < ts.length; i++) {
+        this.addTerm(ts[i]);
+      }
+      return this;
     },
 
   });
@@ -174,7 +247,7 @@
   };
   
   function Eqn(config) {
-    Eqn.parent.constructor.call(this, config);
+    Eqn.parent.call(this, config);
 
     this.vars = {};
     if(this.equationString) this.parseStr(this.equationString);
@@ -182,7 +255,7 @@
   window.Eqn = Eqn;
   inherit(Base, Eqn, {
 
-    parseTokens = function(tokens, coeff) {
+    parseTokens : function(tokens, coeff) {
       var ts = [], nt, mt,
           co = coeff,
           t = tokens.next(),
@@ -212,11 +285,15 @@
           co = coeff;
         }
         if(mt) {
-          mt.terms.push(nt);
+          mt.addTerm(nt);
         }
         if(!operators[t]) {
           t = tokens.next();
           if(t) {
+            if(t === ")") {
+              ts.push(nt);
+              break;
+            }
             if(t === "^") {
               t = tokens.next();
               nt.pwr = Number(t);
@@ -225,7 +302,7 @@
             if(operators[t]) {
               op = t;
               if(op === "*" || op === "/") {
-                mt = new Term({terms : [nt]});
+                mt = new TermMultiply({terms : [nt]});
               }
               else {
                 if(mt) ts.push(mt);
@@ -242,7 +319,7 @@
       return ts;
     },
 
-    parseStr = function(str) {
+    parseStr : function(str) {
       str = str.replace(/\s+/g, " ");
       str = str.replace(/([^\s])(\(|\)|\+|-|\*|\/|\^)([^\s])/g, "$1 $2 $3");
       str = str.replace(/(\(|\)|\+|-|\*|\/|\^)([^\s])/g, "$1 $2");
@@ -251,7 +328,7 @@
       this.equation = new Term({terms : this.parseTokens(new Tokens(str.split(" ")), 1)});
     },
 
-    simplify = function() {
+    simplify : function() {
       this.equation = new Term({terms : this.equation.simplify()});
     },
 
