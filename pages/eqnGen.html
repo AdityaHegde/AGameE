@@ -1,0 +1,63 @@
+<html>
+  <head>
+  	<script type="text/javascript" src="/js/eqn_gen.js"></script>
+    <script src="http://yui.yahooapis.com/3.10.3/build/yui/yui-min.js"></script>
+    <style>
+      .eqn-text {
+        width: 500px;
+      }
+      .table {
+        display: table;
+      }
+      .table-row {
+        display: table-row;
+      }
+      .table-cell {
+        display: table-cell;
+      }
+    </style>
+  </head>
+  <body>
+  	<div>
+      <div class="eqn-text-div">
+  	   <input type="text" class="eqn-text">
+      </div>
+  	  <button id="eqn-process-bttn">Process</button>
+      <div class="unkown-vars-div table"></div>
+  	</div>
+  	<script type="text/javascript">
+
+      YUI().use(['event', 'node', 'template'], function(Y) {
+        var eqnGen,
+            engine = new Y.Template(),
+            eqnTxtTmpl = engine.compile('<input type="text" class="eqn-text">'),
+            uknwnVarTmpl = engine.compile('<div class="table-row">' +
+              '<% for(var v in this.vars) { %>'
+                '<div class="table-cell"><input type="checkbox" class="unkown-var-check"></div>' +
+                '<div class="table-cell unknown-var-name"><%= v %></div>' +
+              '<% } %>'
+            '</div>'),
+            eqnTextsDiv = Y.one(".eqn-text-div"),
+            eqnProcessBttn = Y.one(".unkown-vars-div");
+        Y.one("#eqn-process-bttn").on("click", function(e) {
+          var eqnStrs = [];
+          eqnTextsDiv.all(".eqn-text").each(function(v, k) {
+            eqnStrs.push(v.get("value"));
+          });
+          eqnGen = new EqnGen({equationStrings : eqnStrs});
+          eqnProcessBttn.setHTML(uknwnVarTmpl({vars : eqnGen.vars}));
+        });
+
+        var eqnTxt = Y.one("#eqn-text"),
+            eqnBtn = Y.one("#eqn-gen-bttn");
+        eqnBtn.on("click", function(e) {
+          var eqn = new Eqn({equationString : eqnTxt.value});
+          console.log(eqn.equation);
+          eqn.simplify();
+          console.log(eqn.equation);
+        });
+      });
+  	  
+  	</script>
+  </body>
+</html>

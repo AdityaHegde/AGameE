@@ -48,6 +48,7 @@
   function Term(config) {
     Term.parent.call(this, config);
 
+    this.pwr = this.pwr || 1;
     if(this.terms) {
       this.type = "bracketed";
       
@@ -80,8 +81,8 @@
   };
   inherit(Base, Term, {
 
-    equalTo : function(term) {
-      if(term.var && this.var === term.var && this.pwr === term.pwr) return 1;
+    equalTo : function(term, typeOnly) {
+      if(term.var && this.var === term.var && (typeOnly || this.pwr === term.pwr)) return 1;
       return 0;
     },
 
@@ -123,7 +124,7 @@
 
     simplify : function() {
       if(this.terms) {
-        if(this.pwr) {
+        if(this.pwr !== 1) {
           this.terms = this.power(this.terms, this.pwr);
         }
         var ts = [], tsf = [];
@@ -178,16 +179,25 @@
   inherit(Term, TermMultiply, {
 
     addTerm : function(term) {
+      for(var i = 0; i < this.terms.length; i++) {
+        if(this.terms[i].equalTo(term, "true") === 1) {
+          this.terms[i].pwr += term.pwr;
+          if(this.terms[i].pwr === 0) {
+            this.terms.splice(i, 1);
+          }
+          return;
+        }
+      }
       this.terms.push(term);
       this.terms.sort(Term.sortFun);
       this.coeff *= term.coeff;
       term.coeff = 1;
     },
 
-    equalTo : function(term) {
+    equalTo : function(term, typeOnly) {
       if(term.terms && this.terms.length === term.terms.length) {
         for(var i = 0; i < this.terms.length; i++) {
-          if(this.terms[i].equalTo(term.terms[i]) === 0) {
+          if(this.terms[i].equalTo(term.terms[i], typeOnly) === 0) {
             return 0;
           }
         }
@@ -223,13 +233,13 @@
         }
       }
       else {
-        ts = [this]
+        ts = [this];
       }
       return ts;
     },
 
     multiply : function(term) {
-      var ts = (term.terms ? [term.terms]:[term]);
+      var ts = (term.terms ? term.terms:[term]);
       for(var i = 0; i < ts.length; i++) {
         this.addTerm(ts[i]);
       }
@@ -340,10 +350,16 @@
     }
     this.equations = this.equations || [];
     this.unknowns = this.unknowns || [];
+    this.vars = {};
 
     if(this.equationStrings) {
       for(var i = 0; i < this.equationStrings.length; i++) {
-        this.equations.push(new Eqn({equationString : this.equationStrings[i]}));
+        var eqn = new Eqn({equationString : this.equationStrings[i]});
+        this.equations.push(eqn);
+        for(var v in eqn.vars) {
+          this.vars[v] = this.vars[v] || [];
+          this.vars[v].push(i);
+        }
       } 
     }
   };
