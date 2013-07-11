@@ -17,6 +17,22 @@
   }
 
   function EqnGen(config) {
+    EqnGen.parent.call(this, config);
+
+    this.equations = this.equations || [];
+    this.unknowns = this.unknowns || [];
+    this.vars = {};
+
+    if(this.equationStrings) {
+      for(var i = 0; i < this.equationStrings.length; i++) {
+        var eqn = new Eqn({equationString : this.equationStrings[i]});
+        this.equations.push(eqn);
+        for(var v in eqn.vars) {
+          this.vars[v] = this.vars[v] || [];
+          this.vars[v].push(i);
+        }
+      } 
+    }
   }
   inherit(Base, EqnGen, {
 
@@ -344,23 +360,4 @@
 
   });
 
-  EqnGen.prototype.init = function(config) {
-    for(var c in config) {
-      this[c] = config[c];
-    }
-    this.equations = this.equations || [];
-    this.unknowns = this.unknowns || [];
-    this.vars = {};
-
-    if(this.equationStrings) {
-      for(var i = 0; i < this.equationStrings.length; i++) {
-        var eqn = new Eqn({equationString : this.equationStrings[i]});
-        this.equations.push(eqn);
-        for(var v in eqn.vars) {
-          this.vars[v] = this.vars[v] || [];
-          this.vars[v].push(i);
-        }
-      } 
-    }
-  };
 })();
