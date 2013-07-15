@@ -68,13 +68,23 @@
 
 	function Term(config) {
 		Term.parent.call(this, config);
+		this.type = 0;
 
 		this.pwr = this.pwr || 1;
-		if(this.terms) {
-			this.type = "bracketed";
-			
-		}
-		else {
+		this.coeff = this.coeff || 1;
+		
+		this.init();
+	}
+	Term.sortFun = function(a, b) {
+		if(a.terms || b.terms) return 0;
+		else if(a.var === b.var) return 0;
+		else if(a.var < b.var) return 1;
+		else if(a.var > b.var) return -1;
+		return 0;
+	};
+	inherit(Base, Term, {
+
+		init : function() {
 			this.var = this.var || "";
 			this.coeff = Number(this.coeff) || 1;
 			var c = /^(\d*)(.*)$/.exec(this.var);
@@ -91,16 +101,7 @@
 				this.op = "*";
 				if(this.pwr) this.pwr = -this.pwr;
 			}
-		}
-	}
-	Term.sortFun = function(a, b) {
-		if(a.terms || b.terms) return 0;
-		else if(a.var === b.var) return 0;
-		else if(a.var < b.var) return 1;
-		else if(a.var > b.var) return -1;
-		return 0;
-	};
-	inherit(Base, Term, {
+		},
 
 		equalTo : function(term, typeOnly) {
 			if(term.var && this.var === term.var && (typeOnly || this.pwr === term.pwr)) return 1;
@@ -115,73 +116,17 @@
 			return 0;
 		},
 
-		addTerm : function(term) {
-			this.terms.push(term);
-		},
-
-		power : function(terms, pwr) {
-			var ts = [];
+		power : function(pwr) {
 			if(pwr !== 0) {
-				if(terms) {
-					var st = terms.pop(), mt = (terms.length === 1 ? terms.pop() : new Term({terms : terms})),
-							ncr = 1;
-					for(var i = 0; i <= pwr; i++) {
-						var sti = st.copy(), mti = mt.copy();
-						sti = sti.power((sti.terms ? sti.terms : null), pwr - i);
-						mti = mti.power((mti.terms ? mti.terms : null), i);
-						//mti.simplify();
-						var ct = new TermMultiply({terms : [], coeff : ncr});
-						for(var j = 0; j < sti.length; j++) {
-							if(sti[j].pwr > 0) ct.addTerm(sti[j]);
-						}
-						for(var j = 0; j < mti.length; j++) {
-							if(mti[j].pwr > 0) ct.addTerm(mti[j]);
-						}
-						if(ct.terms.length > 1) {
-							ts.push(ct);
-						}
-						else {
-							ct.terms[0].coeff *= ct.coeff;
-							ts.push(ct.terms[0]);
-						}
-						ncr *= (pwr - i)/(i + 1);
-					}
-				}
-				else {
-					this.pwr = (this.pwr ? this.pwr * pwr : pwr);
-					this.coeff = Math.pow(this.coeff, pwr);
-					ts = [this];
-				}
+				this.pwr = (this.pwr ? this.pwr * pwr : pwr);
+				this.coeff = Math.pow(this.coeff, pwr);
+				return this;
 			}
-			return ts;
+			return null;
 		},
 
 		simplify : function() {
-			if(this.terms) {
-				if(this.pwr !== 1) {
-					this.terms = this.power(this.terms, this.pwr);
-				}
-				var ts = [], tsf = [];
-				for(var t in this.terms) {
-					var ts1 = this.terms[t].simplify();
-					for(var t1 in ts1) ts.push(ts1[t1]);
-				}
-				for(var i = 0; i < ts.length - 1; i++) {
-					if(ts[i] === 0) continue;
-					for(var j = i + 1; j < ts.length; j++) {
-						if(ts[j] === 0) continue;
-						if(ts[i].add(ts[j]) === 1) {
-							ts[j] = 0;
-						}
-					}
-					if(ts[i].coeff !== 0) tsf.push(ts[i]);
-				}
-				if(ts[ts.length - 1] !== 0 && ts[ts.length - 1].coeff !== 0) tsf.push(ts[ts.length - 1]);
-				return tsf;
-			}
-			else {
-				return [this];
-			}
+			return this;
 		},
 
 		multiply : function(term) {
@@ -190,46 +135,157 @@
 		},
 
 		copy : function() {
-			var c;
-			if(this.terms) {
-				c = new Term({coeff : this.coeff, pwr : this.pwr, terms : []});
-				for(var i = 0; i < this.terms.length; i++) {
-					c.addTerm(this.terms[i].copy());
+			return new Term({coeff : this.coeff, var : this.var, pwr : this.pwr, op : this.op});
+		},
+
+		convertToString : function () {
+			return (this.coeff !== 1 ? (this.coeff < 0 ? "("+this.coeff+")":this.coeff):"") + this.var + (this.pwr !== 1 ? "^"+this.pwr : "");
+		},
+
+	});
+
+	function TermBracket(config) {
+		TermMultiply.parent.call(this, config);
+	}
+	inherit(Term, TermBracket, {
+
+		init : function() {
+			for(var i = 0; i < this.terms.length; i++) {
+				this.coeff *= this.terms[i].coeff;
+				this.terms[i].coeff = 1;
+			}
+			this.type = 2;
+		},
+
+		add : function(term) {
+			if(term.type === 1) {
+				for(var i = 0; i < term.terms.length; i++) {
+					this.terms.push(term.terms[i]);
 				}
 			}
 			else {
-				c = new Term({coeff : this.coeff, var : this.var, pwr : this.pwr, op : this.op});
+				this.terms.push(term);
+			}
+		},
+
+		addTerm : function(term) {
+			this.add(term);
+		},
+
+		power : function(pwr) {
+			var ncr = 1, terms = this.terms,
+					st = terms.pop(), mt,
+					br = 0;
+			this.terms = [];
+			if(terms.length !== 1) {
+				mt = new TermBracket({terms : terms});
+				br = 1;
+			}
+			else {
+				mt = terms.pop();
+			}
+			for(var i = 0; i <= pwr; i++) {
+				var sti = st.copy(), mti = mt.copy();
+				sti.power(pwr - i);
+				mti.power(i);
+				//mti.simplify();
+				var ct;
+				if(br === 1) {
+					ct = new TermMultiply({terms : [], coeff : ncr});
+				}
+				else {
+					ct = mti;
+					ct.coeff *= ncr;
+				}
+				ct.multiply(sti);
+				this.add(ct);
+				ncr *= (pwr - i)/(i + 1);
+			}
+			return this;
+		},
+
+		simplify : function() {
+			if(this.pwr !== 1) {
+				this.power(this.pwr);
+			}
+			var terms = this.terms;
+			this.terms = []
+			for(var i = 0; i < terms.length; i++) {
+				terms[i].simplify();
+				this.add(terms[i]);
+			}
+
+			terms = this.terms;
+			this.terms = [];
+			for(var i = 0; i < terms.length - 1; i++) {
+				if(terms[i] === 0) continue;
+				for(var j = 1; j < terms.length; j++) {
+					if(terms[j] === 0) continue;
+					if(terms[i].add(terms[j]) !== 0) {
+						terms[j] = 0;
+					}
+				}
+				if(terms[i].coeff !== 0) this.add(terms[i]);
+			}
+			if(terms[terms.length - 1] !== 0) this.add(terms[terms.length - 1]);
+
+			if(this.terms.length === 1) {
+				return this.terms.pop();
+			}
+			else {
+				return this;
+			}
+			return null;
+		},
+
+		multiply : function(term) {
+			if(term.type < 2) {
+				var t = (term.terms ? term : new TermMultiply({terms : [term]}));
+				for(var i = 0; i < this.terms.length; i++) {
+					this.terms[i] = (this.terms[i].terms ? this.terms[i] : new TermMultiply({terms : [this.terms[i]]}));
+					this.terms[i].addTerm(t.copy());
+				}
+			}
+			else {
+				var terms = this.terms;
+				this.terms = [];
+				for(var i = 0; i < this.terms.length; i++) {
+					for(var j = 0; j < term.terms.length; j++) {
+						var t = new TermMultiply({terms : [this.terms[i].copy()]});
+						t.multiply(term.terms[j].copy());
+						this.terms[i].addTerm(t);
+					}
+				}
+			}
+		},
+
+		copy : function() {
+			var c = new Term({coeff : this.coeff, pwr : this.pwr, terms : []});
+			for(var i = 0; i < this.terms.length; i++) {
+				c.add(this.terms[i].copy());
 			}
 			return c;
 		},
 
 		convertToString : function () {
-			var str = "";
-			if(this.terms) {
-				str = "(";
-				for(var i = 0; i < this.terms.length; i++) {
-					var s = this.terms[i].convertToString()
-					//if(i === 0) s = s.substr(1);
-					str += s;
-					if(i < this.terms.length - 1) str += "+";
-				}
-				str += ")";
+			var str = "(";
+			for(var i = 0; i < this.terms.length; i++) {
+				var s = this.terms[i].convertToString()
+				//if(i === 0) s = s.substr(1);
+				str += s;
+				if(i < this.terms.length - 1) str += "+";
 			}
-			else {
-				str = (this.coeff !== 1 ? (this.coeff < 0 ? "("+this.coeff+")":this.coeff):"") + this.var + (this.pwr !== 1 ? "^"+this.pwr : "");
-			}
+			str += ")";
 			return str;
 		},
-
+		
 	});
 
 
 	function TermMultiply(config) {
 		TermMultiply.parent.call(this, config);
 
-		this.type = "multiTerm";
-		this.terms = config.terms;
-		this.terms.sort(TermMultiply.sortFun);
+		this.type = 1;
 
 		this.coeff = this.coeff || 1;
 		for(var i = 0; i < this.terms.length; i++) {
@@ -267,57 +323,41 @@
 			return 0;
 		},
 
+		power : function(pwr) {
+			if(pwr !== 0) {
+				this.coeff = Math.pow(this.coeff, pwr);
+				for(var i = 0; i < this.terms; i++) {
+					this.terms[i].power(pwr);
+				}
+				return this;
+			}
+			return null;
+		},
+
 		simplify : function() {
-			var ts = [], sts = [], mts = [], stm = new TermMultiply({terms : []});
+			var mts = [], stm = new TermMultiply({terms : []}), bt = null;
 			for(var i = 0; i < this.terms.length; i++) {
-				if(!this.terms[i].type) {
+				if(this.terms[i].type === 0) {
 					//sts.push(this.terms[i]);
 					stm.addTerm(this.terms[i]);
 				}
 				else {
-					mts.push(this.terms[i]);
+					if(!bt) bt = this.terms[i];
+					else mts.push(this.terms[i]);
 				}
 			}
-			if(stm.terms.length === 0) {
-				var tmpMts = mts.shift(),
-				    tmpMtsS = tmpMts.simplify();
-				
-				for(var i = 0; i < tmpMtsS.length; i++) {
-					if(tmpMtsS[i].type && tmpMtsS[i].type !== "multiTerm") {
-						ts.push(new TermMultiply({terms : [tmpMtsS[i]]}));
-					}
-					else {
-						ts.push(tmpMtsS[i]);
-					}
-				}
-			}
-			else {
-				ts = [stm];
-			}
-			if(mts.length > 0) {
-				for(var i = 0; i < mts.length; i++) {
-					var tsb = mts[i].simplify(), tst = [];
-					for(var j = 0; j < ts.length; j++) {
+			bt = bt.simplify();
+			if(stm.terms.length !== 0) {
+				if(!bt) return this;
 
-						for(var k = 0; k < tsb.length; k++) {
-							var tm = new TermMultiply({terms : [ts[j].copy()]});
-							tm.multiply(tsb[k]);
-							if(tm.terms.length > 1) {
-								tst.push(tm);
-							}
-							else {
-								tm.terms[0].coeff *= tm.coeff;
-								tst.push(tm.terms[0]);
-							}
-						}
-					}
-					ts = tst;
-				}
+				bt.multiply(stm);
 			}
-			else {
-				ts = [this];
+
+			for(var i = 0; i < mts.length; i++) {
+				mts[i] = mts[i].simplify();
+				bt.multiply(mts[i]);
 			}
-			return ts;
+			return bt;
 		},
 
 		multiply : function(term) {
@@ -373,7 +413,7 @@
 					else if(op === "/") {
 						co = 1/co;
 					}
-					nt = new Term({terms : this.parseTokens(tokens, co)});
+					nt = new TermBracket({terms : this.parseTokens(tokens, co)});
 				}
 				else if(operators[t]) {
 					nt = new Term({coeff : co, op : op});
@@ -429,11 +469,11 @@
 			str = str.replace(/(\(|\)|\+|-|\*|\/|\^)([^\s])/g, "$1 $2");
 			str = str.replace(/([^\s])(\(|\)|\+|-|\*|\/|\^)/g, "$1 $2");
 
-			this.equation = new Term({terms : this.parseTokens(new Tokens(str.split(" ")), 1)});
+			this.equation = new TermBracket({terms : this.parseTokens(new Tokens(str.split(" ")), 1)});
 		},
 
 		simplify : function() {
-			this.equation = new Term({terms : this.equation.simplify()});
+			this.equation = this.equation.simplify();
 		},
 
 		convertToString : function() {
