@@ -32,6 +32,7 @@
         <div class="eqn-text-div table"></div>
         <button id="eqn-process-bttn">Process</button>
         <div class="unkown-vars-div table"></div>
+        <div class="simplified-eqn-div table"></div>
       </div>
   	</div>
   	<script type="text/javascript">
@@ -49,15 +50,24 @@
                 '<div class="table-cell unknown-var-name"><%= v %></div>' +
               '</div>' +
             '<% } %>'),
+            eqnSimplified = engine.compile('<div class="table-row"><%= this.eqnStr %></div>'),
             eqnTextsDiv = Y.one(".eqn-text-div"),
-            eqnProcessBttn = Y.one(".unkown-vars-div");
+            unkownVarsDiv = Y.one(".unkown-vars-div"),
+            eqnSimplifiedDiv = Y.one(".simplified-eqn-div");
+
         Y.one("#eqn-process-bttn").on("click", function(e) {
           var eqnStrs = [];
           eqnTextsDiv.all(".eqn-text").each(function(v, k) {
             eqnStrs.push(v.get("value"));
           });
           eqnGen = new EqnGen({equationStrings : eqnStrs});
-          eqnProcessBttn.setHTML(uknwnVarTmpl({vars : eqnGen.vars}));
+          //unkownVarsDiv.setHTML(uknwnVarTmpl({vars : eqnGen.vars}));
+          eqnGen.simplify();
+
+          eqnSimplifiedDiv.setHTML("");
+          for(var i = 0; i < eqnGen.equations.length; i++) {
+            eqnSimplifiedDiv.append(eqnSimplified({eqnStr : eqnGen.equations[i].convertToString()}));
+          }
         });
 
         eqnTextsDiv.append(eqnTxtTmpl());
