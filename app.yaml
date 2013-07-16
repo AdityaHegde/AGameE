@@ -5,17 +5,11 @@ api_version: 1
 threadsafe: yes
 
 handlers:
-- url: /css
-  static_dir: css
-
 - url: /js
   static_dir: js
 
 - url: /pages
   static_dir: pages
-
-- url: /images
-  static_dir: images
 
 - url: /textures
   static_dir: textures
