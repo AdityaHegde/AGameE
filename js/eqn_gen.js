@@ -76,11 +76,7 @@
     this.init();
   }
   Term.sortFun = function(a, b) {
-    if(a.terms || b.terms) return 0;
-    else if(a.var === b.var) return 0;
-    else if(a.var < b.var) return 1;
-    else if(a.var > b.var) return -1;
-    return 0;
+    return b.var < a.var;
   };
   inherit(Base, Term, {
 
@@ -129,6 +125,10 @@
       return this;
     },
 
+    condense : function() {
+      return this;
+    },
+
     multiply : function(term) {
       var t = new TermMultiply({terms : [this]});
       return t.multiply(term);
@@ -139,6 +139,7 @@
     },
 
     convertToString : function () {
+      //var c = Math.abs(this.coeff);
       return (this.coeff !== 1 ? (this.coeff < 0 ? "("+this.coeff+")":this.coeff):"") + this.var + (this.pwr !== 1 ? "^"+this.pwr : "");
     },
 
@@ -217,6 +218,7 @@
             ct.coeff *= ncr;
           }
         }
+        ct = ct.condense();
         this.add(ct);
         ncr *= (pwr - i)/(i + 1);
       }
@@ -235,7 +237,11 @@
         this.add(terms[i]);
       }
 
-      terms = this.terms;
+      return this.condense();
+    },
+
+    condense : function() {
+      var terms = this.terms;
       this.terms = [];
       for(var i = 0; i < terms.length - 1; i++) {
         if(terms[i] === 0) continue;
@@ -253,6 +259,7 @@
       if(terms[terms.length - 1] !== 0) this.add(terms[terms.length - 1]);
 
       if(this.terms.length === 1) {
+        this.terms[0].coeff *= this.coeff;
         return this.terms.pop();
       }
       else {
@@ -320,6 +327,7 @@
         this.coeff *= this.terms[i].coeff;
         this.terms[i].coeff = 1;
       }
+      this.terms.sort(Term.sortFun);
     },
 
     addTerm : function(term) {
@@ -333,7 +341,7 @@
         }
       }
       this.terms.push(term);
-      //this.terms.sort(Term.sortFun);
+      this.terms.sort(Term.sortFun);
       this.coeff *= term.coeff;
       term.coeff = 1;
     },
@@ -377,28 +385,7 @@
       if(bt) bt = bt.simplify();
       if(stm.terms.length !== 0) {
         if(!bt) {
-          var terms = this.terms;
-          this.terms = [];
-          for(var i = 0; i < terms.length - 1; i++) {
-            if(terms[i] === 0) continue;
-            for(var j = i + 1; j < terms.length; j++) {
-              if(terms[j] === 0) continue;
-              if(terms[i].equalTo(terms[j]) === 1) {
-                terms[i].pwr += terms[j].pwr;
-                terms[j] = 0;
-              }
-            }
-            if(terms[i].pwr !== 0) {
-              if(terms[i].type === 1) terms[i] = terms[i].simplify();
-              this.add(terms[i]);
-            }
-          }
-          if(terms[terms.length - 1] !== 0) this.add(terms[terms.length - 1]);
-          if(terms.length === 1) {
-            terms.coeff = this.coeff;
-          }
-          this.terms = terms;
-          return this;
+          return this.condense();
         }
 
         bt.multiply(stm);
@@ -410,6 +397,33 @@
       }
 
       return bt;
+    },
+
+    condense : function() {
+      var terms = this.terms;
+      this.terms = [];
+      for(var i = 0; i < terms.length - 1; i++) {
+        if(terms[i] === 0) continue;
+        for(var j = i + 1; j < terms.length; j++) {
+          if(terms[j] === 0) continue;
+          if(terms[i].equalTo(terms[j]) === 1) {
+            terms[i].pwr += terms[j].pwr;
+            terms[j] = 0;
+          }
+        }
+        if(terms[i].pwr !== 0) {
+          if(terms[i].type === 1) terms[i] = terms[i].simplify();
+          this.add(terms[i]);
+        }
+      }
+      if(terms[terms.length - 1] !== 0) this.add(terms[terms.length - 1]);
+      if(terms.length === 1) {
+        terms[0].coeff *= this.coeff;
+        return terms.pop();
+      }
+      if(terms.length === 0) return null;
+      this.terms = terms;
+      return this;
     },
 
     multiply : function(term) {
