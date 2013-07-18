@@ -155,7 +155,7 @@
     },
 
     add : function(term) {
-      if(term.type === 2) {
+      if(term.type === 2 && term.pwr === 1) {
         for(var i = 0; i < term.terms.length; i++) {
           this.terms.push(term.terms[i]);
         }
@@ -227,17 +227,18 @@
     },
 
     simplify : function() {
-      if(this.pwr !== 1) {
-        this.power(this.pwr);
+      var t = this.condense();
+      if(t.pwr !== 1) {
+        t.power(t.pwr);
       }
-      var terms = this.terms;
-      this.terms = []
+      var terms = t.terms;
+      t.terms = []
       for(var i = 0; i < terms.length; i++) {
         terms[i] = terms[i].simplify();
-        this.add(terms[i]);
+        t.add(terms[i]);
       }
 
-      return this.condense();
+      return t.condense();
     },
 
     condense : function() {
@@ -260,6 +261,7 @@
 
       if(this.terms.length === 1) {
         this.terms[0].coeff *= this.coeff;
+        if(this.pwr !== 1) this.terms[0].pwr = this.pwr;
         return this.terms.pop();
       }
       else {
