@@ -271,11 +271,13 @@
 
     multiply : function(term) {
       if(term.type < 2) {
-        //var t = (term.terms ? term : new TermMultiply({terms : [term]}));
-        for(var i = 0; i < this.terms.length; i++) {
-          this.terms[i] = (this.terms[i].terms ? this.terms[i] : new TermMultiply({terms : [this.terms[i]]}));
-          //this.terms[i].addTerm(t.copy());
-          this.terms[i].addTerm(term.copy());
+        var terms = this.terms;
+        this.terms = [];
+        for(var i = 0; i < terms.length; i++) {
+          terms[i] = (terms[i].terms ? terms[i] : new TermMultiply({terms : [terms[i]]}));
+          terms[i].addTerm(term.copy());
+          terms[i] = terms[i].simplify();
+          if(terms[i]) this.addTerm(terms[i]);
         }
       }
       else {
@@ -295,7 +297,7 @@
     copy : function() {
       var c = new TermBracket({pwr : this.pwr, terms : []});
       for(var i = 0; i < this.terms.length; i++) {
-        c.add(this.terms[i].copy());
+        c.addTerm(this.terms[i].copy());
       }
       return c;
     },
@@ -376,11 +378,12 @@
       this.terms = [];
       for(var i = 0; i < terms.length; i++) {
         terms[i] = terms[i].simplify();
-        if(terms[i]) this.add(terms[i].simplify());
+        if(terms[i]) this.addTerm(terms[i]);
       }
 
       var t = this.condense(),
           mts = [], stm = new TermMultiply({terms : []}), bt = null;
+      if(!t.terms) return t;
       for(var i = 0; i < t.terms.length; i++) {
         if(t.terms[i].type === 0) {
           //sts.push(this.terms[i]);
@@ -400,14 +403,13 @@
       }
 
       for(var i = 0; i < mts.length; i++) {
-        mts[i] = mts[i].simplify();
-        if(mts[i]) bt.multiply(mts[i]);
+        bt.multiply(mts[i]);
       }
 
       bt.coeff = this.coeff;
       bt = bt.simplify();
       if(bt.terms.length === 1) {
-        bt.terms[0].coeff *= bt..coeff;
+        bt.terms[0].coeff *= bt.coeff;
         return bt.terms.pop();
       }
       if(bt.terms.length === 0) return null;
@@ -428,16 +430,15 @@
           }
         }
         if(terms[i].pwr !== 0) {
-          if(terms[i].type === 1) terms[i] = terms[i].simplify();
-          if(terms[i]) this.add(terms[i]);
+          if(terms[i]) this.addTerm(terms[i]);
         }
       }
-      if(terms[terms.length - 1] !== 0) this.add(terms[terms.length - 1]);
-      if(terms.length === 1) {
-        terms[0].coeff *= this.coeff;
-        return terms.pop();
+      if(terms[terms.length - 1] !== 0) this.addTerm(terms[terms.length - 1]);
+      if(this.terms.length === 1) {
+        this.terms[0].coeff *= this.coeff;
+        return this.terms.pop();
       }
-      if(terms.length === 0) return null;
+      if(this.terms.length === 0) return null;
       this.terms = terms;
       return this;
     },
@@ -536,7 +537,7 @@
             if(operators[t]) {
               op = t;
               if(op === "*" || op === "/") {
-                mt = new TermMultiply({terms : [nt]});
+                if(!mt) mt = new TermMultiply({terms : [nt]});
               }
               else {
                 if(mt) ts.push(mt);

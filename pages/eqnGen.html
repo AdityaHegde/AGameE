@@ -28,7 +28,7 @@
   <body>
   	<div class="main-container">
       <div class="eqn-text-container">
-        <div class="eqn-text-add">+</div>
+        <div><a href="#" class="eqn-text-add">Add Equation</a></div>
         <div class="eqn-text-div table"></div>
         <button id="eqn-process-bttn">Process</button>
         <div class="unkown-vars-div table"></div>
@@ -42,7 +42,7 @@
             engine = new Y.Template(),
             eqnTxtTmpl = engine.compile('<div class="table-row">' +
               '<div class="table-cell"><input type="text" class="eqn-text"></div>' +
-              '<div class="table-cell remove-bttn">X</div>' +
+              '<div class="table-cell"><a href="#" class="remove-bttn">X</a></div>' +
             '</div>'),
             uknwnVarTmpl = engine.compile('<% for(var v in this.vars) { %>' +
               '<div class="table-row">' +
@@ -72,11 +72,14 @@
 
         eqnTextsDiv.append(eqnTxtTmpl());
         eqnTextsDiv.delegate("click", function(e) {
-          eqnTextsDiv.remove(e.target.ancestor(".table-row"));
+          //eqnTextsDiv.remove(e.target.ancestor(".table-row"));
+          e.target.ancestor(".table-row").remove();
+          e.preventDefault();
         }, ".remove-bttn");
 
         Y.one(".eqn-text-container").delegate("click", function (e) {
           eqnTextsDiv.append(eqnTxtTmpl());
+          e.preventDefault();
         }, ".eqn-text-add")
 
       });
