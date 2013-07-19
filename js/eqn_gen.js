@@ -227,18 +227,18 @@
     },
 
     simplify : function() {
-      var t = this.condense();
-      if(t.pwr !== 1) {
-        t.power(t.pwr);
-      }
-      var terms = t.terms;
-      t.terms = []
+      var terms = this.terms;
+      this.terms = []
       for(var i = 0; i < terms.length; i++) {
         terms[i] = terms[i].simplify();
-        t.add(terms[i]);
+        if(terms[i]) this.add(terms[i]);
+      }
+      var t = this.condense();
+      if(t && t.pwr !== 1) {
+        t = t.power(t.pwr);
       }
 
-      return t.condense();
+      return t;
     },
 
     condense : function() {
@@ -253,7 +253,6 @@
           }
         }
         if(terms[i].coeff !== 0) {
-          if(terms[i].type === 1) terms[i] = terms[i].simplify();
           this.add(terms[i]);
         }
       }
@@ -373,21 +372,28 @@
     },
 
     simplify : function() {
-      var mts = [], stm = new TermMultiply({terms : []}), bt = null;
-      for(var i = 0; i < this.terms.length; i++) {
-        if(this.terms[i].type === 0) {
+      var terms = this.terms;
+      this.terms = [];
+      for(var i = 0; i < terms.length; i++) {
+        terms[i] = terms[i].simplify();
+        if(terms[i]) this.add(terms[i].simplify());
+      }
+
+      var t = this.condense(),
+          mts = [], stm = new TermMultiply({terms : []}), bt = null;
+      for(var i = 0; i < t.terms.length; i++) {
+        if(t.terms[i].type === 0) {
           //sts.push(this.terms[i]);
-          stm.addTerm(this.terms[i]);
+          stm.addTerm(t.terms[i]);
         }
         else {
-          if(!bt) bt = this.terms[i];
-          else mts.push(this.terms[i]);
+          if(!bt) bt = t.terms[i];
+          else mts.push(t.terms[i]);
         }
       }
-      if(bt) bt = bt.simplify();
       if(stm.terms.length !== 0) {
         if(!bt) {
-          return this.condense();
+          return t;
         }
 
         bt.multiply(stm);
@@ -395,8 +401,16 @@
 
       for(var i = 0; i < mts.length; i++) {
         mts[i] = mts[i].simplify();
-        bt.multiply(mts[i]);
+        if(mts[i]) bt.multiply(mts[i]);
       }
+
+      bt.coeff = this.coeff;
+      bt = bt.simplify();
+      if(bt.terms.length === 1) {
+        bt.terms[0].coeff *= bt..coeff;
+        return bt.terms.pop();
+      }
+      if(bt.terms.length === 0) return null;
 
       return bt;
     },
@@ -415,7 +429,7 @@
         }
         if(terms[i].pwr !== 0) {
           if(terms[i].type === 1) terms[i] = terms[i].simplify();
-          this.add(terms[i]);
+          if(terms[i]) this.add(terms[i]);
         }
       }
       if(terms[terms.length - 1] !== 0) this.add(terms[terms.length - 1]);
