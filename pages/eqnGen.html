@@ -6,8 +6,20 @@
       .main-container {
         width: 100%;
       }
+      .header-container {
+        margin-bottom: 20px;
+      }
       h3 {
         text-align: center;
+      }
+      .explaination {
+        margin: 0px;
+        padding: 0px;
+        text-align: center;
+      }
+      .entity {
+        text-decoration: underline;
+        color: blue;
       }
       .eqn-text-container {
         width: 600px;
@@ -38,10 +50,13 @@
   </head>
   <body>
   	<div class="main-container">
-      <div class="header-container">
-        <h3>Equation Generator</h3>
-      </div>
       <div class="eqn-text-container">
+        <div class="header-container">
+          <h3>Equation Generator</h3>
+          <p class="explaination"><span class="entity">Main Eqn</span> : Substitions are done on this equation, simplified version of this is displayed</p>
+          <p class="explaination"><span class="entity">LHS Var</span> : Equation defined is substuted for this variable in "Main Eqn"</p>
+          <p class="explaination"><span class="entity">Enabled</span> : Equation is considered only if this is checked</p>
+        </div>
         <div><a href="#" class="eqn-text-add">Add Equation</a></div>
         <div class="eqn-text-div table">
           <div class="table-row">
