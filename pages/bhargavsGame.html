@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="/js/jquery2.0.3.js">
+</script>
+<script>
+var pos=0,mbox,stop=true,duration=5/*0.5*/,increment=1/*0.4*/,up=false,down=false;
+var pos1=pos+"px";
+function mEnd()
+{
+document.write("hello");
+}
+function startGame()
+{
+if(!stop)//if stop is false i e game is going on stop it
+{
+document.write("thank you for playing");
+document.getElementById("start_stop").value="start";
+}
+else//stop is true game is not started yet then start it
+{
+document.getElementById("start_stop").value="stop";
+stop=false;
+startMove();
+}
+}
+function startMove()
+{
+ var mRandom=Math.random();
+ if(mRandom>=0&&mRandom<0.5)
+ {
+ mDelay("b1");
+ }
+ else
+ {
+ mDelay("b2");
+ }
+}
+function mDelay(box)
+{
+setTimeout(
+  function() 
+  {
+  switch(box){
+  //__________________________________//upper box
+  //__________________________________  
+  case "b1":
+  if(pos>=400&&pos<=420)
+  {
+  if(!down)
+  {
+  document.write("colloded up");
+  //pos=0;
+//startMove();
+  }
+  }
+  break;
+  //__________________________________
+  //__________________________________  
+  //__________________________________//lower box
+  //__________________________________  
+  case "b2":
+  if(pos>=400&&pos<=420)
+  {
+  if(!up)
+  {
+  document.write("colloded down");
+  //pos=0;
+//startMove();
+  }
+  }
+  break;
+  //__________________________________
+  //__________________________________  
+  }
+pos=pos+increment;//4
+var pos1=pos+"px";
+document.getElementById(box).style.position="absolute";
+document.getElementById(box).style.left=pos1;
+if(pos>=800)
+{
+pos=0;
+startMove();
+up=false;
+down=false;
+}
+else{
+mDelay(box);
+}
+  }/*function ends*/,duration);//0.5
+}//mDelay ends
+//________________________________________________________________________
+//________________________________________________________________________
+var makeUpHigh=function()
+{
+up=true;
+}
+var makeDownHigh=function()
+{
+down=true;
+}
+$(document).keydown(function(e) {
+
+  switch(e.keyCode)
+  {
+  case 37://left
+  $("div.myPlayer").animate({
+      left: "-=50"
+	  },"fast");
+	$("div.myPlayer").animate({
+      left: "+=50"
+	  },"fast");
+	  break;
+	  case 38://up
+	  $("div.myPlayer").animate({
+      top: "-=50"
+	  },"fast",makeUpHigh());
+	$("div.myPlayer").animate({
+      top: "+=50"
+	  },"fast");
+	  break;
+	  case 39://right
+	  $("div.myPlayer").animate({
+      left: "+=50"
+	  },"fast");
+	$("div.myPlayer").animate({
+      left: "-=50"
+	  },"fast");
+	  break;
+	  case 40://down
+	  $("div.myPlayer").animate({
+      top: "+=50"
+	  },"fast",makeDownHigh());
+	$("div.myPlayer").animate({
+      top: "-=50"
+	  },"fast");
+	  break;
+	  default:
+	  break;  
+  }  
+  });
+//________________________________________________________________________
+//________________________________________________________________________
+</script>
+</head>
+<body>
+<div style="position:absolute;left:200px;top:70px" >
+<input type="button" onclick="startGame()" id="start_stop" value="start">
+</div>
+<div class="myBox" style="background:blue ;height:20px;width:50px;position:absolute;left:0px;top:124px" id="b1">
+<!--<img src="images/car.png" height="50" width="100"></img>-->
+</div>
+<div class="myBox1" style="background:blue ;height:20px;width:50px;position:absolute;left:0px;top:172px" id="b2">
+</div>
+<div class="wall" style="background:#585858 ;height:80px;width:60px;position:absolute;left:0px;top:118px;" id="wall">
+</div>
+<div class="wall" style="background:#585858 ;height:80px;width:60px;position:absolute;left:800px;top:118px;" id="wall">
+</div>
+<div class="myLine" style="background:#585858 ;height:5px;width:448px;position:absolute;left:0px;top:193px;" id="myLine">
+</div>
+<div class="myLine" style="background:#585858 ;height:5px;width:448px;position:absolute;left:0px;top:118px;" id="myLine">
+</div>
+<div class="myLine" style="background:#585858 ;height:5px;width:380px;position:absolute;left:472px;top:193px;" id="myLine">
+</div>
+<div class="myLine" style="background:#585858 ;height:5px;width:380px;position:absolute;left:472px;top:118px;" id="myLine">
+</div>
+<div class="myPlayer" style="background:red;height:74px;width:20px;position:absolute;left:450px;top:121px" id="myPlayer">
+</div>
+</body>
+</html>

@@ -22,16 +22,17 @@
     this.equations = this.equations || [];
     this.unknowns = this.unknowns || [];
     this.vars = {};
+    this.lhsTerms = this.lhsTerms || [];
 
-    if(this.equationStrings) {
-      for(var i = 0; i < this.equationStrings.length; i++) {
-        var eqn = new Eqn({equationString : this.equationStrings[i]});
-        this.equations.push(eqn);
-        for(var v in eqn.vars) {
-          this.vars[v] = this.vars[v] || [];
-          this.vars[v].push(i);
-        }
-      } 
+    for(var i = 0; i < this.equationStrings.length; i++) {
+      var eqn = new Eqn({equationString : this.equationStrings[i]}),
+          lhsTerm = new Term({var : this.lhsVariables[i], op : "+"});
+      this.equations.push(eqn);
+      for(var v in eqn.vars) {
+        this.vars[v] = this.vars[v] || [];
+        this.vars[v].push(i);
+      }
+      this.lhsTerms.push(lhsTerm);
     }
   }
   inherit(Base, EqnGen, {
@@ -40,6 +41,18 @@
       for(var i = 0; i < this.equationStrings.length; i++) {
         this.equations[i].simplify();
       }
+    },
+
+    buildMainEqn : function() {
+      for(var i = 0; i < this.equations.length; i++) {
+        if(i !== this.mainIndex) {
+          this.equations[this.mainIndex].replace(this.lhsTerms[i], this.equations[i].equation);
+        }
+      }
+    },
+
+    getMainEqn : function() {
+      return this.equations[this.mainIndex].convertToString();
     },
 
   });
@@ -139,8 +152,24 @@
     },
 
     convertToString : function () {
-      //var c = Math.abs(this.coeff);
       return (this.coeff !== 1 ? (this.coeff < 0 ? "("+this.coeff+")":this.coeff):"") + this.var + (this.pwr !== 1 ? "^"+this.pwr : "");
+    },
+
+    replace : function(term, withTerm) {
+      if(term.var && term.var === this.var) {
+        var ret = withTerm.copy();
+        ret.pwr *= this.pwr;
+        if(ret.type === 2) {
+          for(var i = 0; i < ret.terms.length; i++) {
+            ret.terms[i].coeff *= this.coeff;
+          }
+        }
+        else {
+          ret.coeff *= this.coeff;
+        }
+        return ret;
+      }
+      return this;
     },
 
   });
@@ -152,6 +181,18 @@
 
     init : function() {
       this.type = 2;
+    },
+
+    equalTo : function(term) {
+      if(term.type !== 2 || this.terms.length === term.terms.length) {
+        return 0;
+      }
+      for(var i = 0; i < this.terms.length; i++) {
+        if(this.terms.equalTo(term.terms[i]) === 0) {
+          return 0
+        }
+      }
+      return 1;
     },
 
     add : function(term) {
@@ -188,7 +229,6 @@
         var sti = st.copy(), mti = mt.copy();
         sti = sti.power(pwr - i);
         mti = mti.power(i);
-        //mti.simplify();
         var ct;
         if(br !== 1) {
           if(mti) {
@@ -228,13 +268,13 @@
 
     simplify : function() {
       var terms = this.terms;
-      this.terms = []
+      this.terms = [];
       for(var i = 0; i < terms.length; i++) {
         terms[i] = terms[i].simplify();
         if(terms[i]) this.add(terms[i]);
       }
       var t = this.condense();
-      if(t && t.pwr !== 1) {
+      if(t && t.type > 0 && t.pwr !== 1) {
         t = t.power(t.pwr);
       }
 
@@ -305,13 +345,19 @@
     convertToString : function () {
       var str = "(";
       for(var i = 0; i < this.terms.length; i++) {
-        var s = this.terms[i].convertToString()
-        //if(i === 0) s = s.substr(1);
+        var s = this.terms[i].convertToString();
         str += s;
         if(i < this.terms.length - 1) str += "+";
       }
       str += ")";
       return str;
+    },
+
+    replace : function(term, withTerm) {
+      for(var i = 0; i < this.terms.length; i++) {
+        this.terms[i] = this.terms[i].replace(term, withTerm);
+      }
+      return this;
     },
     
   });
@@ -386,12 +432,16 @@
       if(!t.terms) return t;
       for(var i = 0; i < t.terms.length; i++) {
         if(t.terms[i].type === 0) {
-          //sts.push(this.terms[i]);
           stm.addTerm(t.terms[i]);
         }
         else {
           if(!bt) bt = t.terms[i];
           else mts.push(t.terms[i]);
+        }
+      }
+      if(bt) {
+        for(var i = 0; i < bt.terms.length; i++) {
+          bt.terms[i].coeff *= this.coeff;
         }
       }
       if(stm.terms.length !== 0) {
@@ -463,12 +513,17 @@
     convertToString : function () {
       var str = (this.coeff !== 1 ? (this.coeff < 0 ? "("+this.coeff+")":this.coeff):"");
       for(var i = 0; i < this.terms.length; i++) {
-        var s = this.terms[i].convertToString()
-        //if(i === 0) s = s.substr(1);
+        var s = this.terms[i].convertToString();
         str += s;
-        //if(i < this.terms.length - 1) str += "*";
       }
       return str;
+    },
+
+    replace : function(term, withTerm) {
+      for(var i = 0; i < this.terms.length; i++) {
+        this.terms[i] = this.terms[i].replace(term, withTerm);
+      }
+      return this;
     },
 
   });
@@ -567,12 +622,12 @@
       this.equation = this.equation.simplify();
     },
 
+    replace : function(term, withTerm) {
+      this.equation = this.equation.replace(term, withTerm);
+      this.simplify();
+    },
+
     convertToString : function() {
-      /*var str = "";
-      for(var i = 0; i < this.equation.length; i++) {
-        str += this.equation[i].convertToString();
-      }
-      return str;*/
       return this.equation.convertToString();
     },
 

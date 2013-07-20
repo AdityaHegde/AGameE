@@ -6,13 +6,22 @@
       .main-container {
         width: 100%;
       }
+      h3 {
+        text-align: center;
+      }
       .eqn-text-container {
-        width: 500px;
+        width: 600px;
         margin-left: auto;
         margin-right: auto;
       }
       .eqn-text {
         width: 300px;
+      }
+      .eqn-text-lhs {
+        width: 50px;
+      }
+      .remove-bttn {
+        font-size: 12px;
       }
       .table {
         display: table;
@@ -22,15 +31,27 @@
       }
       .table-cell {
         display: table-cell;
+        padding: 5px;
+        border: 1px solid #000;
       }
     </style>
   </head>
   <body>
   	<div class="main-container">
+      <div class="header-container">
+        <h3>Equation Generator</h3>
+      </div>
       <div class="eqn-text-container">
         <div><a href="#" class="eqn-text-add">Add Equation</a></div>
-        <div class="eqn-text-div table"></div>
-        <button id="eqn-process-bttn">Process</button>
+        <div class="eqn-text-div table">
+          <div class="table-row">
+            <div class="table-cell">Main Eqn</div>
+            <div class="table-cell">LHS Var</div>
+            <div class="table-cell">The Equation</div>
+            <div class="table-cell">Enabled</div>
+          </div>
+        </div>
+        <button id="eqn-gen-bttn">Generate</button>
         <div class="unkown-vars-div table"></div>
         <div class="simplified-eqn-div table"></div>
       </div>
@@ -41,7 +62,10 @@
         var eqnGen,
             engine = new Y.Template(),
             eqnTxtTmpl = engine.compile('<div class="table-row">' +
+              '<div class="table-cell"><input type="radio" name="eqn-text-main" class="eqn-text-main" checked></div>' +
+              '<div class="table-cell"><input type="text" class="eqn-text-lhs"></div>' +
               '<div class="table-cell"><input type="text" class="eqn-text"></div>' +
+              '<div class="table-cell"><input type="checkbox" class="eqn-text-enable" checked></div>' +
               '<div class="table-cell"><a href="#" class="remove-bttn">X</a></div>' +
             '</div>'),
             uknwnVarTmpl = engine.compile('<% for(var v in this.vars) { %>' +
@@ -55,24 +79,32 @@
             unkownVarsDiv = Y.one(".unkown-vars-div"),
             eqnSimplifiedDiv = Y.one(".simplified-eqn-div");
 
-        Y.one("#eqn-process-bttn").on("click", function(e) {
-          var eqnStrs = [];
-          eqnTextsDiv.all(".eqn-text").each(function(v, k) {
-            eqnStrs.push(v.get("value"));
+        Y.one("#eqn-gen-bttn").on("click", function(e) {
+          var eqnStrs = [], lhsVars = [], mainIndex = -1;
+          eqnTextsDiv.all(".table-row").each(function(v, k) {
+            if(k > 0) {
+              if(v.one(".eqn-text-enable").get("checked")) {
+                eqnStrs.push(v.one(".eqn-text").get("value"));
+                lhsVars.push(v.one(".eqn-text-lhs").get("value"));
+                if(v.one(".eqn-text-main").get("checked")) {
+                  mainIndex = k - 1;
+                }
+              }
+            }
           });
-          eqnGen = new EqnGen({equationStrings : eqnStrs});
-          //unkownVarsDiv.setHTML(uknwnVarTmpl({vars : eqnGen.vars}));
-          eqnGen.simplify();
+          if(mainIndex !== -1) {
+            eqnGen = new EqnGen({equationStrings : eqnStrs, lhsVariables : lhsVars, mainIndex : mainIndex});
+            //unkownVarsDiv.setHTML(uknwnVarTmpl({vars : eqnGen.vars}));
+            eqnGen.simplify();
+            eqnGen.buildMainEqn();
 
-          eqnSimplifiedDiv.setHTML("");
-          for(var i = 0; i < eqnGen.equations.length; i++) {
-            eqnSimplifiedDiv.append(eqnSimplified({eqnStr : eqnGen.equations[i].convertToString()}));
+            eqnSimplifiedDiv.setHTML("");
+            eqnSimplifiedDiv.append(eqnSimplified({eqnStr : eqnGen.getMainEqn()}));
           }
         });
 
         eqnTextsDiv.append(eqnTxtTmpl());
         eqnTextsDiv.delegate("click", function(e) {
-          //eqnTextsDiv.remove(e.target.ancestor(".table-row"));
           e.target.ancestor(".table-row").remove();
           e.preventDefault();
         }, ".remove-bttn");
