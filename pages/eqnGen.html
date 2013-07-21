@@ -26,11 +26,17 @@
         margin-left: auto;
         margin-right: auto;
       }
-      .eqn-text {
-        width: 300px;
+      .eqn-text-main {
+        margin-left: 23px;
       }
       .eqn-text-lhs {
         width: 50px;
+      }
+      .eqn-text {
+        width: 300px;
+      }
+      .eqn-text-enable {
+        margin-left: 18px;
       }
       .remove-bttn {
         font-size: 12px;
@@ -56,6 +62,7 @@
           <p class="explaination"><span class="entity">Main Eqn</span> : Substitions are done on this equation, simplified version of this is displayed</p>
           <p class="explaination"><span class="entity">LHS Var</span> : Equation defined is substuted for this variable in "Main Eqn"</p>
           <p class="explaination"><span class="entity">Enabled</span> : Equation is considered only if this is checked</p>
+          <p class="explaination"><span class="entity">Segregate</span> : Segregate LHS of main equation. Eg, LHS : a, eqn : (a^2+2ac+2bc), result : (a^2+a(2c+2b))</p>
         </div>
         <div><a href="#" class="eqn-text-add">Add Equation</a></div>
         <div class="eqn-text-div table">
@@ -67,6 +74,7 @@
           </div>
         </div>
         <button id="eqn-gen-bttn">Generate</button>
+        <button id="eqn-seg-bttn">Segregate</button>
         <div class="unkown-vars-div table"></div>
         <div class="simplified-eqn-div table"></div>
       </div>
@@ -113,9 +121,12 @@
             eqnGen.simplify();
             eqnGen.buildMainEqn();
 
-            eqnSimplifiedDiv.setHTML("");
-            eqnSimplifiedDiv.append(eqnSimplified({eqnStr : eqnGen.getMainEqn()}));
+            eqnSimplifiedDiv.setHTML(eqnSimplified({eqnStr : eqnGen.getMainEqn()}));
           }
+        });
+
+        Y.one("#eqn-seg-bttn").on('click', function(e) {
+          eqnSimplifiedDiv.setHTML(eqnSimplified({eqnStr : eqnGen.segregate()}));
         });
 
         eqnTextsDiv.append(eqnTxtTmpl());
