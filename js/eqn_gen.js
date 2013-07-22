@@ -87,8 +87,14 @@
     },
 
     back : function(c) {
-      c = c || 1;
-      this.cur -= c;
+      if(this.cur < this.tokens.length) {
+        c = c || 1;
+        this.cur -= c;
+      }
+    },
+
+    isEmpty : function() {
+      return this.cur >= this.tokens.length;
     },
   });
 
@@ -141,13 +147,17 @@
         }
         t = tokens.next();
       }
+      if(t === "(") {
+        tokens.cur -= 2;
+        return new TermBracket({terms : []}).parse(tokens);
+      }
       if(Number.isNaN(t) === "false") {
         this.coeff *= Number(t);
         t = tokens.next();
       }
       if(operators[t]) {
         if(t === "+" || t === "-" || t === ")") {
-          tokens.cur--;
+          tokens.back();
           return this;
         }
         else if(t === "*" || t === "/") {
@@ -162,14 +172,16 @@
       }
       this.var = t;
       t = tokens.next();
-      if(operators[t]) {
-        if(t === "^") {
+      if(t === "^") {
+        t = tokens.next();
+        if(t === "-") {
+          this.pwr = -this.pwr;
           t = tokens.next();
-          this.pwr *= Number(t);
-          return this;
         }
+        this.pwr *= Number(t);
+        return this;
       }
-      tokens.cur--;
+      if(t) tokens.back();
       return this;
     },
 
@@ -261,19 +273,39 @@
     },
 
     parse : function(tokens) {
-      var t, term = new TermBracket({terms : []}), ct;
-      while(t !== ")") {
+      console.log("bracket - enter");
+      var t = tokens.next(), ct;
+      if(operators[t]) {
+        if(t === "-") this.coeff = -this.coeff;
+        else if(t === "/") this.pwr = -this.pwr;
+        t = tokens.next();
+      }
+      else tokens.back();
+      while(!tokens.isEmpty()) {
+        console.log("bracket - while : "+tokens.cur);
         ct = new Term({}).parse(tokens);
         t = tokens.next();
         if(t === "*" || t === "/") {
-          tokens.cur--;
-          this.addTerm(new TermMultiply({terms : [ct]}));
+          tokens.back();
+          this.addTerm(new TermMultiply({terms : [ct]}).parse(tokens));
         }
         else {
-          tokens.cur--;
+          tokens.back();
           this.addTerm(ct);
         }
+        t = tokens.next();
+        if(t === ")") break;
+        if(!t) return this;
+        tokens.back();
       }
+      t = tokens.next();
+      if(t === "^") {
+        this.pwr = Number(tokens.next());
+      }
+      else if(t) {
+        tokens.back();
+      }
+      return this;
     },
 
     equalTo : function(term) {
@@ -495,6 +527,31 @@
       this.terms.sort(Term.sortFun);
     },
 
+    parse : function(tokens) {
+      console.log("multiply - enter");
+      var t = tokens.next(), ct;
+      if(this.terms.length === 0) {
+        if(t === "-") this.coeff = -this.coeff;
+        else if(t === "/") this.pwr = -this.pwr;
+        t = tokens.next();
+        if(!Number.isNaN(t)) this.coeff *= Number(t);
+        else tokens.back();
+      }
+      else tokens.back();
+      while(!tokens.isEmpty()) {
+        ct = new Term({}).parse(tokens);
+        this.addTerm(ct);
+        console.log("multiply - while");
+        t = tokens.next();
+        if(t === "+" || t === "-") {
+          tokens.back();
+          return this;
+        }
+        else if(t) tokens.back();
+      }
+      return this;
+    },
+
     addTerm : function(term) {
       for(var i = 0; i < this.terms.length; i++) {
         if(this.terms[i].equalTo(term, "true") === 1) {
@@ -667,87 +724,13 @@
   window.Eqn = Eqn;
   inherit(Base, Eqn, {
 
-    parseTokens : function(tokens, coeff) {
-      var ts = [], nt, mt,
-          co = coeff,
-          t = tokens.next(),
-          op = "+";
-      while(t) {
-        if(t === ")") break;
-        if(t === "(") {
-          if(op === "-") {
-            co = -co;
-          }
-          else if(op === "/") {
-            co = 1/co;
-          }
-          nt = new TermBracket({terms : this.parseTokens(tokens, co)});
-        }
-        else if(operators[t]) {
-          nt = new Term({coeff : co, op : op});
-          co = coeff;
-        }
-        else {
-          if(/^(\d+)$/.test(t)) {
-            co *= t;
-            t = tokens.next();
-            continue;
-          }
-          this.vars[t] = 1;
-          nt = new Term({var : t, coeff : co, op : op});
-          co = coeff;
-        }
-        if(mt) {
-          mt.addTerm(nt);
-        }
-        if(!operators[t]) {
-          t = tokens.next();
-          if(t) {
-            if(t === ")") {
-              ts.push(nt);
-              break;
-            }
-            if(t === "^") {
-              var sign = 1;
-              t = tokens.next();
-              if(t === "-") {
-                sign = -1;
-                t = tokens.next();
-              }
-              nt.pwr *= sign * Number(t);
-              t = tokens.next();
-            }
-            if(operators[t]) {
-              op = t;
-              if(op === "*" || op === "/") {
-                if(!mt) mt = new TermMultiply({terms : [nt]});
-                if(op === "/") nt.pwr = -nt.pwr;
-              }
-              else {
-                if(mt) {
-                  ts.push(mt);
-                  nt = null;
-                }
-                mt = null;
-              }
-            }
-          }
-        }
-        
-        if(!mt && nt) ts.push(nt);
-        t = tokens.next();
-      }
-      if(mt) ts.push(mt);
-      return ts;
-    },
-
     parseStr : function(str) {
       str = str.replace(/\s+/g, " ");
       str = str.replace(/([^\s])(\(|\)|\+|-|\*|\/|\^)([^\s])/g, "$1 $2 $3");
       str = str.replace(/(\(|\)|\+|-|\*|\/|\^)([^\s])/g, "$1 $2");
       str = str.replace(/([^\s])(\(|\)|\+|-|\*|\/|\^)/g, "$1 $2");
 
-      this.equation = new TermBracket({terms : this.parseTokens(new Tokens(str.split(" ")), 1)});
+      this.equation = new TermBracket({terms : []}).parse(new Tokens(str.split(" ")));
     },
 
     simplify : function() {
