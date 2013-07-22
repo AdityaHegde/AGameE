@@ -87,8 +87,8 @@
     },
 
     back : function(c) {
-      if(this.cur < this.tokens.length) {
-        c = c || 1;
+      c = c || 1;
+      if(this.cur + c <= this.tokens.length) {
         this.cur -= c;
       }
     },
@@ -283,7 +283,15 @@
       else tokens.back();
       while(!tokens.isEmpty()) {
         console.log("bracket - while : "+tokens.cur);
-        ct = new Term({}).parse(tokens);
+        t = tokens.next();
+        if(t === "(") {
+          //tokens.back();
+          ct = new TermBracket({terms : []}).parse(tokens);
+        }
+        else {
+          tokens.back();
+          ct = new Term({}).parse(tokens);
+        }
         t = tokens.next();
         if(t === "*" || t === "/") {
           tokens.back();
