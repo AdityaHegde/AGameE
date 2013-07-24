@@ -148,7 +148,7 @@
         t = tokens.next();
       }
       if(t === "(") {
-        tokens.cur -= 2;
+        tokens.back(2);
         return new TermBracket({terms : []}).parse(tokens);
       }
       if(Number.isNaN(t) === "false") {
@@ -273,7 +273,6 @@
     },
 
     parse : function(tokens) {
-      console.log("bracket - enter");
       var t = tokens.next(), ct;
       if(operators[t]) {
         if(t === "-") this.coeff = -this.coeff;
@@ -282,7 +281,6 @@
       }
       else tokens.back();
       while(!tokens.isEmpty()) {
-        console.log("bracket - while : "+tokens.cur);
         t = tokens.next();
         if(t === "(") {
           //tokens.back();
@@ -536,7 +534,6 @@
     },
 
     parse : function(tokens) {
-      console.log("multiply - enter");
       var t = tokens.next(), ct;
       if(this.terms.length === 0) {
         if(t === "-") this.coeff = -this.coeff;
@@ -549,7 +546,6 @@
       while(!tokens.isEmpty()) {
         ct = new Term({}).parse(tokens);
         this.addTerm(ct);
-        console.log("multiply - while");
         t = tokens.next();
         if(t === "+" || t === "-") {
           tokens.back();
@@ -561,19 +557,24 @@
     },
 
     addTerm : function(term) {
-      for(var i = 0; i < this.terms.length; i++) {
-        if(this.terms[i].equalTo(term, "true") === 1) {
-          this.terms[i].pwr += term.pwr;
-          if(this.terms[i].pwr === 0) {
-            this.terms.splice(i, 1);
+      if(term.var && !term.terms) {
+        for(var i = 0; i < this.terms.length; i++) {
+          if(this.terms[i].equalTo(term, "true") === 1) {
+            this.terms[i].pwr += term.pwr;
+            if(this.terms[i].pwr === 0) {
+              this.terms.splice(i, 1);
+            }
+            return;
           }
-          return;
         }
+        this.terms.push(term);
+        this.terms.sort(Term.sortFun);
+        this.coeff *= term.coeff;
+        term.coeff = 1;
       }
-      this.terms.push(term);
-      this.terms.sort(Term.sortFun);
-      this.coeff *= term.coeff;
-      term.coeff = 1;
+      else {
+        this.coeff *= term.coeff;
+      }
     },
 
     equalTo : function(term, typeOnly) {
