@@ -1,5 +1,6 @@
 <html>
   <head>
+    <title>Equation Generator</title>
   	<script type="text/javascript" src="/js/eqn_gen.js"></script>
     <script src="http://yui.yahooapis.com/3.10.3/build/yui/yui-min.js"></script>
     <style>
@@ -103,15 +104,16 @@
             eqnSimplifiedDiv = Y.one(".simplified-eqn-div");
 
         Y.one("#eqn-gen-bttn").on("click", function(e) {
-          var eqnStrs = [], lhsVars = [], mainIndex = -1;
+          var eqnStrs = [], lhsVars = [], mainIndex = -1, i = 0;
           eqnTextsDiv.all(".table-row").each(function(v, k) {
             if(k > 0) {
               if(v.one(".eqn-text-enable").get("checked")) {
                 eqnStrs.push(v.one(".eqn-text").get("value"));
                 lhsVars.push(v.one(".eqn-text-lhs").get("value"));
                 if(v.one(".eqn-text-main").get("checked")) {
-                  mainIndex = k - 1;
+                  mainIndex = i;
                 }
+                i++;
               }
             }
           });
