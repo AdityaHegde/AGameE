@@ -5,6 +5,9 @@ api_version: 1
 threadsafe: yes
 
 handlers:
+- url: /gota
+  static_dir: gota
+
 - url: /js
   static_dir: js
 

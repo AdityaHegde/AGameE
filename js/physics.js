@@ -28,7 +28,7 @@
           if(this.bodies[b].fixedBody !== "true") {
             this.bodies[b].body.d.contacts = [];
             for(var cb in this.bodies) {
-              if(this.bodies[cb].fixedBody === "true") this.bodies[b].testCollision(this.bodies[cb]);
+              if(cb !== b) this.bodies[b].testCollision(this.bodies[cb]);
             }
             this.bodies[b].resolveCollision();
           }

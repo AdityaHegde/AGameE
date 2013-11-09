@@ -1,147 +1,44 @@
 <html>
   <head>
   	<script type="text/javascript" src="/js/eqn_gen.js"></script>
-    <script src="http://yui.yahooapis.com/3.10.3/build/yui/yui-min.js"></script>
+  	<script type="text/javascript" src="/js/eqn_solver.js"></script>
+    <script src="/js/jquery2.0.3.js"></script>
+  	<script type="text/javascript" src="/js/utils.js"></script>
     <style>
-      .main-container {
-        width: 100%;
+      .eqn-gen-text {
+        width:calc(100% - 50px);
       }
-      .header-container {
-        margin-bottom: 20px;
-      }
-      h3 {
-        text-align: center;
-      }
-      .explaination {
-        margin: 0px;
-        padding: 0px;
-        text-align: center;
-      }
-      .entity {
-        text-decoration: underline;
-        color: blue;
-      }
-      .eqn-text-container {
-        width: 600px;
-        margin-left: auto;
-        margin-right: auto;
-      }
-      .eqn-text-main {
-        margin-left: 23px;
-      }
-      .eqn-text-lhs {
-        width: 50px;
-      }
-      .eqn-text {
-        width: 300px;
-      }
-      .eqn-text-enable {
-        margin-left: 18px;
-      }
-      .remove-bttn {
-        font-size: 12px;
-      }
-      .table {
-        display: table;
-      }
-      .table-row {
-        display: table-row;
-      }
-      .table-cell {
-        display: table-cell;
-        padding: 5px;
-        border: 1px solid #000;
+      .output {
+        width:calc(100% - 15px);
+        padding:5px;
+        word-break:break-word;
       }
     </style>
   </head>
   <body>
   	<div class="main-container">
-      <div class="eqn-text-container">
-        <div class="header-container">
-          <h3>Equation Generator</h3>
-          <p class="explaination"><span class="entity">Main Eqn</span> : Substitions are done on this equation, simplified version of this is displayed</p>
-          <p class="explaination"><span class="entity">LHS Var</span> : Equation defined is substuted for this variable in "Main Eqn"</p>
-          <p class="explaination"><span class="entity">Enabled</span> : Equation is considered only if this is checked</p>
-          <p class="explaination"><span class="entity">Segregate</span> : Segregate LHS of main equation. Eg, LHS : a, eqn : (a^2+2ac+2bc), result : (a^2+a(2c+2b))</p>
-        </div>
-        <div><a href="#" class="eqn-text-add">Add Equation</a></div>
-        <div class="eqn-text-div table">
-          <div class="table-row">
-            <div class="table-cell">Main Eqn</div>
-            <div class="table-cell">LHS Var</div>
-            <div class="table-cell">The Equation</div>
-            <div class="table-cell">Enabled</div>
-          </div>
-        </div>
-        <button id="eqn-gen-bttn">Generate</button>
-        <button id="eqn-seg-bttn">Segregate</button>
-        <div class="unkown-vars-div table"></div>
-        <div class="simplified-eqn-div table"></div>
+      <div class="eqn-gen-div">
+        Eqns : <input id="eqn-gen-eqns" class="eqn-gen-text" type="text"><br>
+        LHS  : <input id="eqn-gen-lhs" class="eqn-gen-text" type="text"><br>
+        Main Eqn Idx : <input id="eqn-gen-main" type="text"><br>
+        <button onclick="generateEqn()">Generate</button>
+        <div class="output"><span id="simplified"></span></div>
+        <div class="output"><span id="segregated"></span></div>
+        <div class="output"><span id="code"></span></div>
       </div>
   	</div>
   	<script type="text/javascript">
-
-      YUI().use(['event', 'node', 'template'], function(Y) {
-        var eqnGen,
-            engine = new Y.Template(),
-            eqnTxtTmpl = engine.compile('<div class="table-row">' +
-              '<div class="table-cell"><input type="radio" name="eqn-text-main" class="eqn-text-main" checked></div>' +
-              '<div class="table-cell"><input type="text" class="eqn-text-lhs"></div>' +
-              '<div class="table-cell"><input type="text" class="eqn-text"></div>' +
-              '<div class="table-cell"><input type="checkbox" class="eqn-text-enable" checked></div>' +
-              '<div class="table-cell"><a href="#" class="remove-bttn">X</a></div>' +
-            '</div>'),
-            uknwnVarTmpl = engine.compile('<% for(var v in this.vars) { %>' +
-              '<div class="table-row">' +
-                '<div class="table-cell"><input type="checkbox" class="unkown-var-check"></div>' +
-                '<div class="table-cell unknown-var-name"><%= v %></div>' +
-              '</div>' +
-            '<% } %>'),
-            eqnSimplified = engine.compile('<div class="table-row"><%= this.eqnStr %></div>'),
-            eqnTextsDiv = Y.one(".eqn-text-div"),
-            unkownVarsDiv = Y.one(".unkown-vars-div"),
-            eqnSimplifiedDiv = Y.one(".simplified-eqn-div");
-
-        Y.one("#eqn-gen-bttn").on("click", function(e) {
-          var eqnStrs = [], lhsVars = [], mainIndex = -1;
-          eqnTextsDiv.all(".table-row").each(function(v, k) {
-            if(k > 0) {
-              if(v.one(".eqn-text-enable").get("checked")) {
-                eqnStrs.push(v.one(".eqn-text").get("value"));
-                lhsVars.push(v.one(".eqn-text-lhs").get("value"));
-                if(v.one(".eqn-text-main").get("checked")) {
-                  mainIndex = k - 1;
-                }
-              }
-            }
-          });
-          if(mainIndex !== -1) {
-            eqnGen = new EqnGen({equationStrings : eqnStrs, lhsVariables : lhsVars, mainIndex : mainIndex});
-            //unkownVarsDiv.setHTML(uknwnVarTmpl({vars : eqnGen.vars}));
-            eqnGen.simplify();
-            eqnGen.buildMainEqn();
-
-            eqnSimplifiedDiv.setHTML(eqnSimplified({eqnStr : eqnGen.getMainEqn()}));
-          }
-        });
-
-        Y.one("#eqn-seg-bttn").on('click', function(e) {
-          eqnSimplifiedDiv.setHTML(eqnSimplified({eqnStr : eqnGen.segregate()}));
-        });
-
-        eqnTextsDiv.append(eqnTxtTmpl());
-        eqnTextsDiv.delegate("click", function(e) {
-          e.target.ancestor(".table-row").remove();
-          e.preventDefault();
-        }, ".remove-bttn");
-
-        Y.one(".eqn-text-container").delegate("click", function (e) {
-          eqnTextsDiv.append(eqnTxtTmpl());
-          e.preventDefault();
-        }, ".eqn-text-add")
-
-      });
-  	  
+      function generateEqn() {
+        var eqns = $("#eqn-gen-eqns").val(),
+            lhs = $("#eqn-gen-lhs").val(),
+            mainIdx = $("#eqn-gen-main").val(),
+            eqnGen = new EqnGen({equationStrings : eqns.split(/\s*,\s*/), lhsVariables : lhs.split(/\s*,\s*/), mainIndex : Number(mainIdx)});
+        eqnGen.simplify();
+        eqnGen.buildMainEqn();
+        $("#simplified").html(eqnGen.getMainEqn());
+        $("#segregated").html(eqnGen.segregate());
+        $("#code").html(eqnGen.getCode());
+      }
   	</script>
   </body>
 </html>

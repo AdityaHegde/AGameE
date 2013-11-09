@@ -402,10 +402,16 @@ lastTime = 0;
         this.features[f].entity = this;
         this.features[f].init();
       }
+      this.getDimension();
+    },
+
+    getDimension : function() {
       if(this.featureLink.Render) {
         this.shape = this.featureLink.Render.shape;
         this.d = this.featureLink.Render.getDimension();
+        return this.d;
       }
+      return null;
     },
 
     animate : function(elapsed) {
@@ -546,7 +552,7 @@ lastTime = 0;
     },
 
     draw : function(gl) {
-      mat4.rotate(mvMatrix, degToRad(-this.turn[0]), [1, 0, 0]);
+      mat4.rotate(mvMatrix, degToRad(this.turn[0]), [1, 0, 0]);
       mat4.rotate(mvMatrix, degToRad(-this.turn[1]), [0, 1, 0]);
       mat4.rotate(mvMatrix, degToRad(-this.turn[2]), [0, 0, 1]);
       mat4.translate(mvMatrix, [-this.pos[0], -this.pos[1], -this.pos[2]]);
@@ -596,15 +602,15 @@ lastTime = 0;
         f = 1;
       }
 
-      if (AGameE.currentlyPressedKeys[82]) {
+      /*if (AGameE.currentlyPressedKeys[82]) {
         //R, look up
-        turn[0] = this.turnRate*elapsed;
+        turn[0] = -this.turnRate*elapsed;
         f = 1;
       } else if (AGameE.currentlyPressedKeys[70]) {
         //F, look down
-        turn[0] = -this.turnRate*elapsed;
+        turn[0] = this.turnRate*elapsed;
         f = 1;
-      }
+      }*/
 
       if (f === 1) {
         this.fire("WASD::move", { velocity : velocity, turn : turn });

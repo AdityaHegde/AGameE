@@ -1,0 +1,3 @@
+Eqn : xp21+k*xn2, yp21+k*yn2, zp21+k*zn2, (xp13+xp21)*xn2+(yp13+yp21)*yn2+(zp13+zp21)*zn2, xp11+xn1*d1, yp11+yn1*d1, zp11+zn1*d1, (xp13-xp23)^2+(yp13-yp23)^2+(zp13-zp23)^2-h^2
+lhs : xp23, yp23, zp23, k, xp13, yp13, zp13, d1
+mainIndexp : 7

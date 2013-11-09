@@ -8,6 +8,7 @@ window.heap = {
   insert : function(array, element, comparator) {
     comparator = comparator || heap.comparator;
 
+    element.heapIdx = array.length;
     array.push(element);
 
     heap.moveUp(array, array.length - 1, comparator);
@@ -18,6 +19,7 @@ window.heap = {
     if(array.length > 0) {
       var ele = array[0];
       array[0] = array[array.length - 1];
+      array[array.length - 1].heapIdx = 0;
       delete array[array.length - 1];
       array.length = array.length - 1;
       heap.moveDown(array, 0, comparator);
@@ -27,13 +29,20 @@ window.heap = {
     return ["null"];
   },
 
+  modified : function(array, element, comparator) {
+    heap.moveUp(array, element.heapIdx, comparator);
+    heap.moveDown(array, element.heapIdx, comparator);
+  },
+
   moveUp : function(array, i, comparator) {
     var j = Math.floor((i - 1)/2);
-    while(j > 0) {
+    while(j >= 0) {
       if(comparator(array[i], array[j]) > 0.0) {
         tmp = array[i];
         array[i] = array[j];
         array[j] = tmp;
+        array[i].heapIdx = i;
+        array[j].heapIdx = j;
         i = j;
         j = Math.floor((i - 1)/2);
       }
@@ -50,6 +59,8 @@ window.heap = {
         tmp = array[i];
         array[i] = array[j];
         array[j] = tmp;
+        array[i].heapIdx = i;
+        array[j].heapIdx = j;
         i = j;
         j = 2*i + 1;
       }
@@ -57,6 +68,8 @@ window.heap = {
         tmp = array[i];
         array[i] = array[j + 1];
         array[j + 1] = tmp;
+        array[i].heapIdx = i;
+        array[j + 1].heapIdx = j + 1;
         i = j + 1;
         j = 2*i + 2;
       }
@@ -70,32 +83,14 @@ window.heap = {
     return b - a;
   },
 };
-
-vec3.angle = function (a, b) {
-  return Math.acos(vec3.dot(a, b)/(vec3.length(a)*vec3.length(b)));
-};
-
-vec3.project = function(a, b, c) {
-  (c||c=a);
-  vec3.scale(c, vec3.dot(a, b));
-  return c;
-};
-
-line = {};
-line.perpPointFromLine = function(l1, p1, l2, p2, h) {
-  var n1 = vec3.normalize(l1, []), n2 = vec3.normalize(l2, []),
-      t1 = (p2[0] - p1[0])*n2[0] + (p2[1] - p1[1])*n2[1] + (p2[2] - p1[2])*n2[2],
-      dn = n1[0]*n2[0] + n1[1]*n2[1] + n1[2]*n2[2];
-
-  if(dn !== 0) {
-    return [[(t1 + h)/dn, vec3.add(p1, vec3.scale(l1, (t1 + h)/dn, []), [])], [(t1 - h)/dn, vec3.add(p1, vec3.scale(l1, (t1 - h)/dn))]];
+Math.heap = window.heap;
+Math.hcf = function(a, b) {
+  a = Math.abs(a);
+  b = Math.abs(b);
+  while(a - b !== 0) {
+    var a1 = Math.max(a, b), b1 = Math.min(a, b);
+    a = b1;
+    b = a1 - b1;
   }
-  return [];
-};
-line.perpPointFromPoint = function(l1, p1, p2) {
-  var n = vec3.normalize(l1, []),
-      p = [0, 0, 0], d1 = (p2[0] - p1[0])*n[0] + (p2[1] - p1[1])*n[1] + (p2[2] - p1[2])*n[2], d = d1 / vec3.length(l1);
-  vec3.scale(n, d1);
-  vec3.add(n, p1, p);
-  return [p, d];
+  return b;
 };
