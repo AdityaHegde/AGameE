@@ -730,10 +730,20 @@
 
     init : function() {
       this.coeff = this.coeff || 1;
-      for(var i = 0; i < this.terms.length; i++) {
-        this.coeff *= this.terms[i].coeff;
-        this.terms[i].coeff = 1;
-        //if(!this.terms[i].var) this.terms.splice(i, 1);
+      var terms = this.terms;
+      this.terms = [];
+      for(var i = 0; i < terms.length; i++) {
+        this.coeff *= terms[i].coeff;
+        if(terms[i].type === 1) {
+          for(var j = 0; j < terms[i].terms.length; j++) {
+            terms[i].terms[j].coeff = 1;
+            this.terms.push(terms[i].terms[j]);
+          }
+        }
+        else {
+          terms[i].coeff = 1;
+          this.terms.push(terms[i]);
+        }
       }
       this.terms.sort(Term.sortFun);
     },
@@ -752,7 +762,7 @@
         ct = new Term({}).parse(tokens);
         this.addTerm(ct);
         t = tokens.next();
-        if(t === "+" || t === "-") {
+        if(t === "+" || t === "-" || t === ")") {
           tokens.back();
           return this;
         }
@@ -788,6 +798,14 @@
         else this.coeff /= term.coeff;
         term.coeff = 1;
         term.terms = [];
+      }
+      else if(term.type === 1) {
+        for(var i = 0; i < term.terms.length; i++) {
+          this.coeff *= term.terms[i].coeff;
+          term.terms[i].coeff = 1;
+          this.terms.push(term.terms[i]);
+        }
+        this.terms.sort(Term.sortFun);
       }
       else {
         this.terms.push(term);
