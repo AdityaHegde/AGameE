@@ -1,5 +1,6 @@
 <html>
   <head>
+    <title>Equation Generator</title>
   	<script type="text/javascript" src="/js/eqn_gen.js"></script>
   	<script type="text/javascript" src="/js/eqn_solver.js"></script>
   	<script type="text/javascript" src="/js/utils.js"></script>
@@ -42,60 +43,60 @@
 
       var testCases = [
         {
-          eqnStrs : ["(a+b)^2"],
-          lhsVars : ["a"],
+          eqnStrs : ["(x+y)^2"],
+          lhsVars : ["x"],
           mainIndex : 0,
-          simplified : "(b^2+2ab+a^2)",
-          segregated : "(b^2+2ab+a^2)",
+          simplified : "(y^2+2xy+x^2)",
+          segregated : "(y^2+2xy+x^2)",
         },
         {
-          eqnStrs : ["(a+b)^2+(a-c)^2"],
-          lhsVars : ["a"],
+          eqnStrs : ["(x+y)^2+(x-z)^2"],
+          lhsVars : ["x"],
           mainIndex : 0,
-          simplified : "(b^2+2ab+2a^2+c^2+(-2)ac)",
-          segregated : "(b^2+c^2+(2b+(-2)c)a+2a^2)",
+          simplified : "(y^2+2xy+2x^2+z^2+(-2)xz)",
+          segregated : "(y^2+z^2+(2y+(-2)z)x+2x^2)",
         },
         {
-          eqnStrs : ["a+d", "(a+b)^2+(b-c)^2"],
-          lhsVars : ["c", "a"],
+          eqnStrs : ["x+d", "(x+y)^2+(y-z)^2"],
+          lhsVars : ["z", "x"],
           mainIndex : 1,
-          simplified : "(2b^2+2a^2+d^2+(-2)bd+2ad)",
-          segregated : "(2b^2+d^2+(-2)bd+2ad+2a^2)",
+          simplified : "(2y^2+2x^2+d^2+(-2)yd+2xd)",
+          segregated : "(2y^2+d^2+(-2)yd+2xd+2x^2)",
         },
         {
-          eqnStrs : ["a+d", "(a+b)^2+2*a*b*c"],
-          lhsVars : ["c", "a"],
+          eqnStrs : ["x+d", "(x+y)^2+2*x*y*z"],
+          lhsVars : ["z", "x"],
           mainIndex : 1,
-          simplified : "(b^2+2ab+a^2+2a^2b+2abd)",
-          segregated : "(b^2+(2b+2bd)a+(1+2b)a^2)",
+          simplified : "(y^2+2xy+x^2+2x^2y+2xyd)",
+          segregated : "(y^2+(2y+2yd)x+(1+2y)x^2)",
         },
         {
-          eqnStrs : ["a+b", "a+c", "(d+e)^2"],
-          lhsVars : ["d", "e", "a"],
+          eqnStrs : ["x+y", "x+z", "(d+e)^2"],
+          lhsVars : ["d", "e", "x"],
           mainIndex : 2,
-          simplified : "(c^2+4ac+4a^2+4ab+2bc+b^2)",
-          segregated : "(c^2+2bc+b^2+(4c+4b)a+4a^2)",
+          simplified : "(z^2+4xz+4x^2+4xy+2yz+y^2)",
+          segregated : "(z^2+2yz+y^2+(4z+4y)x+4x^2)",
         },
         {
-          eqnStrs : ["a+p*b", "a+p*c", "d^2+e^2"],
+          eqnStrs : ["x+p*y", "x+p*z", "d^2+e^2"],
           lhsVars : ["d", "e", "p"],
           mainIndex : 2,
-          simplified : "(2a^2+2abp+b^2p^2+2acp+c^2p^2)",
-          segregated : "(2a^2+(2ab+2ac)p+(b^2+c^2)p^2)",
+          simplified : "(2x^2+2xyp+y^2p^2+2xzp+z^2p^2)",
+          segregated : "(2x^2+(2xy+2xz)p+(y^2+z^2)p^2)",
         },
         {
-          eqnStrs : ["a*(b+c)+p", "a+p*c", "d^2+e^2"],
+          eqnStrs : ["x*(y+z)+p", "x+p*z", "d^2+e^2"],
           lhsVars : ["d", "e", "p"],
           mainIndex : 2,
-          simplified : "((b+c)^2a^2+2(b+c)ap+p^2+a^2+2acp+c^2p^2)",
-          segregated : "((b+c)^2a^2+a^2+(2(b+c)a+2ac)p+(1+c^2)p^2)",
+          simplified : "((y+z)^2x^2+2(y+z)xp+p^2+x^2+2xzp+z^2p^2)",
+          segregated : "((y+z)^2x^2+x^2+(2(y+z)x+2xz)p+(1+z^2)p^2)",
         },
         {
-          eqnStrs : ["a+p*(b+c)^2", "a+p*c", "d^2+e^2"],
+          eqnStrs : ["x+p*(y+z)^2", "x+p*z", "d^2+e^2"],
           lhsVars : ["d", "e", "p"],
           mainIndex : 2,
-          simplified : "(2a^2+2(b+c)^2ap+(b+c)^4p^2+2acp+c^2p^2)",
-          segregated : "(2a^2+((2(b+c)^2+2c)a)p+((b+c)^4+c^2)p^2)",
+          simplified : "(2x^2+2(y+z)^2xp+(y+z)^4p^2+2xzp+z^2p^2)",
+          segregated : "(2x^2+((2(y+z)^2+2z)x)p+((y+z)^4+z^2)p^2)",
         },
         {
           eqnStrs : ["a+p*b", "(z-x)^2+(z-y)^2"],
@@ -119,7 +120,7 @@
           var simplified = eqnGen.getMainEqn(), segregated = eqnGen.segregate();
           log("Simplified : "+simplified+(simplified !== tc.simplified ? " : FAILED != "+tc.simplified:""));
           log("Segregated : "+segregated+(segregated !== tc.segregated ? " : FAILED != "+tc.segregated:""));
-          log("Code : "+eqnGen.getCode());
+          //log("Code : "+eqnGen.getCode());
         }
       }
       function runTestCases() {

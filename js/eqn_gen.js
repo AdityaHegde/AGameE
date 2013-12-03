@@ -35,10 +35,10 @@
     EqnGen.parent.call(this, config);
 
     this.equations = this.equations || [];
-    this.unknowns = this.unknowns || [];
+    this.unknowns = this.unknowns || {};
     this.vars = {};
     this.lhsTerms = this.lhsTerms || [];
-    var unknsF = (this.unknowns.length === 0);
+    var unknsF = 1;//(this.unknowns.length === 0);
 
     for(var i = 0; i < this.equationStrings.length; i++) {
       var eqn = new Eqn({equationString : this.equationStrings[i]}),
@@ -49,7 +49,7 @@
         this.vars[v].push(i);
       }
       this.lhsTerms.push(lhsTerm);
-      if(unknsF) this.unknowns.push(this.lhsVariables[i]);
+      if(unknsF) this.unknowns[this.lhsVariables[i]] = 1;
     }
   }
   inherit(Base, EqnGen, {
@@ -78,6 +78,8 @@
     segregate : function() {
       this.equations[this.mainIndex].segregate(this.lhsTerms[this.mainIndex]);
       this.equations[this.mainIndex].getVars(this.unknowns);
+      this.equations[this.mainIndex].sortAndStringify();
+      this.equations[this.mainIndex].segregated = this.equations[this.mainIndex].segregated.condense();
       return this.equations[this.mainIndex].segregated.convertToString();
     },
 
@@ -110,7 +112,16 @@
           this.equations[i] = 0;
         }
       }
-      return window.EqnSolver.solve_single_var_master(eqns, mainTerm, mainEqn, this.unknowns, this.lhsTerms, {});
+      code += window.EqnSolver.solve_single_var_master(eqns, mainTerm, mainEqn, this.unknowns, this.lhsTerms, {});
+      return code;
+    },
+
+    sortAndStringify : function() {
+      this.equations[this.mainIndex].sortAndStringify();
+    },
+
+    getSortedStr : function() {
+      return this.equations[this.mainIndex].getSortedStr();
     },
 
   });
@@ -239,7 +250,8 @@
     },
 
     equalTo : function(term, typeOnly) {
-      if(term.var && this.var === term.var && (typeOnly || this.pwr === term.pwr)) return 1;
+      if(this.sortStr && term.sortStr && this.sortStr === term.sortStr) return 1;
+      else if(term.var && this.var === term.var && (typeOnly || this.pwr === term.pwr)) return 1;
       return 0;
     },
 
@@ -265,10 +277,12 @@
     },
 
     condense : function() {
+      this.sortAndStringify();
       return this;
     },
 
     multiply : function(term, sterm) {
+      if(term.type > 0) return term.multiply(this, sterm);
       var t = new TermMultiply({terms : [this]});
       return t.multiply(term, sterm);
     },
@@ -337,13 +351,13 @@
     getCode : function() {
       var str = "", cf = 0;
       if(this.var) {
-        /*var idx = indexMap[this.var.charAt(0)];
+        var idx = indexMap[this.var.charAt(0)];
         if(idx || idx === 0) {
           str += this.var.substr(1) + "[" + idx + "]";
         }
-        else {*/
+        else {
           str += this.var;
-        //}
+        }
         cf = 1;
       }
       if(this.pwr !== 1) {
@@ -356,12 +370,24 @@
       return str;
     },
 
+    sortAndStringify : function() {
+      if(this.var) {
+        this.sortStr = this.var + (this.pwr !== 1 ? "^"+this.pwr : "");
+        this.fullStr = (this.coeff !== 1 ? (this.coeff < 0 ? "("+this.coeff+")":this.coeff):"") + this.sortStr;
+      }
+      else {
+        this.sortStr = 1;
+        this.fullStr = (this.coeff < 0 ? "("+this.coeff+")":this.coeff);
+      }
+    },
+
   });
 
   function TermBracket(config) {
     TermMultiply.parent.call(this, config);
   }
   TermBracket.comparator = function(a, b) {return a[0] - b[0]};
+  TermBracket.sort_fun = function(a, b) {return a.sortStr.length === b.sortStr.length ? (a.sortStr > b.sortStr ? 1 : -1) : (a.sortStr.length > b.sortStr.length ? 1 : -1)};
   inherit(Term, TermBracket, {
 
     init : function() {
@@ -411,7 +437,8 @@
     },
 
     equalTo : function(term) {
-      if(term.type !== 2 || this.terms.length !== term.terms.length) {
+      if(this.sortStr && term.sortStr && this.sortStr === term.sortStr) return 0;
+      else if(term.type !== 2 || this.terms.length !== term.terms.length) {
         return 0;
       }
       for(var i = 0; i < this.terms.length; i++) {
@@ -466,41 +493,15 @@
         var sti = st.copy(), mti = mt.copy();
         sti = sti.power(pwr - i, sterm);
         mti = mti.power(i, sterm);
-        var ct;
-        if(br !== 1) {
-          if(mti) {
-            if(sti) {
-              ct = new TermMultiply({terms : [mti], coeff : ncr});
-              ct.multiply(sti, sterm);
-            }
-            else {
-              ct = mti;
-            }
-          }
-          else {
-            ct = sti;
-            ct.coeff *= ncr;
-          }
-        }
-        else {
-          if(mti) {
-            ct = mti;
-            if(sti) {
-              sti.coeff *= ncr;
-              ct.multiply(sti, sterm);
-            }
-          }
-          else {
-            ct = sti;
-            ct.coeff *= ncr;
-          }
-        }
+        var ct = sti || mti;
+        if(sti && mti) ct = ct.multiply(mti);
+        ct.coeff *= ncr;
         ct = ct.condense();
         this.addTerm(ct);
         ncr *= (pwr - i)/(i + 1);
       }
       this.pwr = 1;
-      return this;
+      return this.condense();
     },
 
     simplify : function(sterm) {
@@ -519,6 +520,7 @@
     },
 
     condense : function() {
+      this.sortAndStringify();
       var terms = this.terms;
       this.terms = [];
       for(var i = 0; i < terms.length - 1; i++) {
@@ -558,13 +560,8 @@
 
     multiply : function(term, sterm) {
       if(term.type < 2) {
-        var terms = this.terms;
-        this.terms = [];
-        for(var i = 0; i < terms.length; i++) {
-          terms[i] = (terms[i].terms ? terms[i] : new TermMultiply({terms : [terms[i]]}));
-          terms[i].addTerm(term.copy());
-          terms[i] = terms[i].simplify(sterm);
-          if(terms[i]) this.addTerm(terms[i]);
+        for(var i = 0; i < this.terms.length; i++) {
+          this.terms[i] = this.terms[i].multiply(term, sterm);
         }
       }
       else {
@@ -572,9 +569,7 @@
         this.terms = [];
         for(var i = 0; i < terms.length; i++) {
           for(var j = 0; j < term.terms.length; j++) {
-            var t = new TermMultiply({terms : [terms[i].copy()]});
-            t.multiply(term.terms[j].copy(), sterm);
-            this.terms.push(t);
+            this.terms.push(terms[i].multiply(term.terms[j]));
           }
         }
       }
@@ -717,6 +712,22 @@
       if(this.pwr && this.pwr !== 1) str = "Math.pow(" + str +", " + this.pwr + ")";
       return str;
     },
+
+    sortAndStringify : function() {
+      this.fullStr = (this.coeff && this.coeff !== 1 ? (this.coeff < 0 ? "("+this.coeff+")": this.coeff):"");
+      this.sortStr = "(";
+      for(var i = 0; i < this.terms.length; i++) {
+        this.terms[i].sortAndStringify();
+      }
+      this.terms.sort(TermBracket.sort_fun);
+      for(var i = 0; i < this.terms.length; i++) {
+        this.sortStr += this.terms[i].fullStr;
+        if(i < this.terms.length - 1) this.sortStr += "+";
+      }
+      this.sortStr += ")";
+      if(this.pwr && this.pwr !== 1) this.sortStr += "^"+this.pwr;
+      this.fullStr += this.sortStr;
+    },
     
   });
 
@@ -817,7 +828,8 @@
     },
 
     equalTo : function(term, typeOnly) {
-      if(term.terms && this.terms.length === term.terms.length) {
+      if(this.sortStr && term.sortStr && this.sortStr === term.sortStr) return 1;
+      else if(term.terms && this.terms.length === term.terms.length) {
         for(var i = 0; i < this.terms.length; i++) {
           if(this.terms[i].equalTo(term.terms[i], typeOnly) === 0) {
             return 0;
@@ -893,6 +905,7 @@
     },
 
     condense : function() {
+      this.sortAndStringify();
       var terms = this.terms;
       this.terms = [];
       for(var i = 0; i < terms.length - 1; i++) {
@@ -905,7 +918,11 @@
           }
         }
         if(terms[i].pwr !== 0) {
-          if(terms[i]) this.addTerm(terms[i]);
+          if(terms[i]) {
+            this.addTerm(terms[i]);
+            this.coeff *= terms[i].coeff;
+            terms[i].coeff = 1;
+          }
         }
       }
       if(terms[terms.length - 1] !== 0) this.addTerm(terms[terms.length - 1]);
@@ -918,6 +935,7 @@
     },
 
     multiply : function(term, sterm) {
+      if(term.type === 2) return term.multiply(this, sterm);
       var ts = (term.terms ? term.terms:[term]);
       for(var i = 0; i < ts.length; i++) {
         this.addTerm(ts[i]);
@@ -998,6 +1016,20 @@
       return str;
     },
 
+    sortAndStringify : function() {
+      this.fullStr = (this.coeff && this.coeff !== 1 ? (this.coeff < 0 ? "("+this.coeff+")": this.coeff):"");
+      this.sortStr = "";
+      for(var i = 0; i < this.terms.length; i++) {
+        this.terms[i].sortAndStringify();
+      }
+      this.terms.sort(TermBracket.sort_fun);
+      for(var i = 0; i < this.terms.length; i++) {
+        if(this.terms[i].fullStr != "1") this.sortStr += this.terms[i].fullStr;
+      }
+      if(this.pwr && this.pwr !== 1) this.sortStr += "^"+this.pwr;
+      this.fullStr += this.sortStr;
+    },
+
   });
 
 
@@ -1022,6 +1054,7 @@
 
     simplify : function(sterm) {
       this.equation = this.equation.simplify(sterm);
+      //this.equation.sortAndStringify();
     },
 
     replace : function(term, withTerm, sterm) { //sterm = term to segregate
@@ -1034,6 +1067,7 @@
       this.segregated = this.equation.copy();
       s = this.segregated.segregate(term, null);
       this.segregated = this.segregated.factorize(term);
+      //this.segregated.sortAndStringify();
       //if(s.length) return s[1];
       //else return s;
     },
@@ -1066,6 +1100,14 @@
 
     copy : function() {
       return new Eqn({equation : this.equation.copy()});
+    },
+
+    sortAndStringify : function() {
+      (this.segregated || this.equation).sortAndStringify();
+    },
+
+    getSortedStr : function() {
+      return (this.segregated || this.equation).fullStr;
     },
 
   });
