@@ -5,6 +5,9 @@ api_version: 1
 threadsafe: yes
 
 handlers:
+- url: /ember
+  static_dir: ember
+
 - url: /gota
   static_dir: gota
 

@@ -77,6 +77,8 @@
 
     segregate : function() {
       this.equations[this.mainIndex].segregate(this.lhsTerms[this.mainIndex]);
+      this.equations[this.mainIndex].sortAndStringify();
+      this.equations[this.mainIndex].factorize(this.lhsTerms[this.mainIndex]);
       this.equations[this.mainIndex].getVars(this.unknowns);
       this.equations[this.mainIndex].sortAndStringify();
       this.equations[this.mainIndex].segregated = this.equations[this.mainIndex].segregated.condense();
@@ -339,6 +341,10 @@
       }
     },
 
+    factorize : function(sterm) {
+      return this;
+    },
+
     getVars : function(varRef) {
       if(this.var) {
         var arr = /^(.*?)\[\d+\]$/.exec(this.var);
@@ -386,8 +392,17 @@
   function TermBracket(config) {
     TermMultiply.parent.call(this, config);
   }
-  TermBracket.comparator = function(a, b) {return a[0] - b[0]};
-  TermBracket.sort_fun = function(a, b) {return a.sortStr.length === b.sortStr.length ? (a.sortStr > b.sortStr ? 1 : -1) : (a.sortStr.length > b.sortStr.length ? 1 : -1)};
+  TermBracket.strcmp = function(a, b) {return a.length === b.length ? (a > b ? 1 : -1) : (a.length > b.length ? 1 : -1)};
+  TermBracket.strcmp1 = function(a, b) {return a.length === b.length ? (a == b ? 0 : (a > b ? 1 : -1)) : (a.length > b.length ? 1 : -1)};
+  TermBracket.comparator = function(a, b) {
+    if(a[0] === b[0]) {
+      var strcmp = TermBracket.strcmp1(a[1], b[1]);
+      if(strcmp === 0) a[2] - b[2];
+      return -strcmp;
+    }
+    return a[0] - b[0];
+  };
+  TermBracket.sort_fun = function(a, b) {return TermBracket.strcmp(a.sortStr, b.sortStr)};
   inherit(Term, TermBracket, {
 
     init : function() {
@@ -450,6 +465,9 @@
     },
 
     addTerm : function(term) {
+      if(!term) {
+        console.log(0);
+      }
       if(term.type === 2 && term.pwr === 1) {
         for(var i = 0; i < term.terms.length; i++) {
           this.terms.push(term.terms[i]);
@@ -638,14 +656,16 @@
     },
 
     _termFound : function(termHeap, term, termRef) {
-      var key = term.var+"_"+term.pwr;
-      if(termRef[key]) {
-        termRef[key][0]++;
-        heap.modified(termHeap, termRef[key], TermBracket.comparator);
-      }
-      else {
-        termRef[key] = [1, term.var, term.pwr];
-        heap.insert(termHeap, termRef[key], TermBracket.comparator);
+      for(var i = 1; i <= term.pwr; i++) {
+        var key = term.var+"_"+i;
+        if(termRef[key]) {
+          termRef[key][0]++;
+          heap.modified(termHeap, termRef[key], TermBracket.comparator);
+        }
+        else {
+          termRef[key] = [1, term.var, i];
+          heap.insert(termHeap, termRef[key], TermBracket.comparator);
+        }
       }
     },
 
@@ -654,20 +674,8 @@
       while(f === 1) {
         var termHeap = [], termRef = {};
         for(var i = 0; i < this.terms.length; i++) {
-          if(this.terms[i].hasSTerm(sterm)) {
-            if(this.terms[i].type === 1) {
-              for(var j = 0; j < this.terms[i].terms.length; j++) {
-                if(this.terms[i].terms[j].type === 2) {
-                  var rett = this.terms[i].terms[j].factorize(sterm);
-                  if(rett.type !== 2) {
-                    this.terms[i].terms.splice(j, 1);
-                    this.terms[i].addTerm(rett);
-                  }
-                }
-              }
-            }
-          }
-          else {
+          this.terms[i] = this.terms[i].factorize(sterm);
+          if(!this.terms[i].hasSTerm(sterm)) {
             if(this.terms[i].type === 0 && this.terms[i].var) {
               this._termFound(termHeap, this.terms[i], termRef);
             }
@@ -683,11 +691,12 @@
         f = 0;
         if(termHeap.length > 0 && termHeap[0][0] > 1) {
           this.segregate(new Term({var : termHeap[0][1]}), termHeap[0][2]);
+          this.sortAndStringify();
           if(this.terms.length === 1) {
             var t = this.terms.pop();
             t.coeff *= this.coeff;
             t.pwr *= this.pwr;
-            return t;
+            return t.factorize(sterm);
           }
           f = 1;
         }
@@ -997,6 +1006,27 @@
       return str;
     },
 
+    factorize : function(sterm) {
+      for(var i = 0; i < this.terms.length;) {
+        var rett = this.terms[i].factorize(sterm);
+        if(this.terms[i].type === 2) {
+          if(rett.type !== 2) {
+            this.terms.splice(i, 1);
+            this.addTerm(rett);
+          }
+          else {
+            this.terms[i] = rett;
+            i++;
+          }
+        }
+        else {
+          this.terms[i] = rett;
+          i++;
+        }
+      }
+      return this;
+    },
+
     getVars : function(varRef) {
       for(var i = 0; i < this.terms.length; i++) {
         this.terms[i].getVars(varRef);
@@ -1066,7 +1096,7 @@
       var s;
       this.segregated = this.equation.copy();
       s = this.segregated.segregate(term, null);
-      this.segregated = this.segregated.factorize(term);
+      //this.segregated = this.segregated.factorize(term);
       //this.segregated.sortAndStringify();
       //if(s.length) return s[1];
       //else return s;
@@ -1099,7 +1129,13 @@
     },
 
     copy : function() {
-      return new Eqn({equation : this.equation.copy()});
+      var eqn =  new Eqn({equation : this.equation.copy()});
+      eqn.vars = this.vars;
+      eqn.varRef = this.varRef;
+      eqn.unknowns = this.unknowns;
+      eqn.hasUnknowns = this.hasUnknowns;
+      eqn.equationString = this.equationString;
+      return eqn;
     },
 
     sortAndStringify : function() {

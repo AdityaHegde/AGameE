@@ -30,6 +30,9 @@
   	</div>
   	<script type="text/javascript">
       function generateEqn() {
+        $("#simplified").html("");
+        $("#segregated").html("");
+        $("#code").html("");
         var eqns = $("#eqn-gen-eqns").val(),
             lhs = $("#eqn-gen-lhs").val(),
             mainIdx = $("#eqn-gen-main").val(),

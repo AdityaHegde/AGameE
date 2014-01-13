@@ -105,6 +105,13 @@
           simplified : "((a+bp)^2+(-2)(a+bp)z+2z^2+y^2+(-2)yz)",
           segregated : "((a+bp)^2+y^2+((-2)(a+bp)+(-2)y)z+2z^2)",
         },
+        {
+          eqnStrs : ["b+p*d", "b+q*e", "(a+c)^2+(b+c)^2"],
+          lhsVars : ["a", "c", "b"],
+          mainIndex : 2,
+          simplified : "((a+bp)^2+(-2)(a+bp)z+2z^2+y^2+(-2)yz)",
+          segregated : "((a+bp)^2+y^2+((-2)(a+bp)+(-2)y)z+2z^2)",
+        },
       ], logdiv = $("#log");
       function log(logStr) {
         logdiv.append(logStr+"<br>");
@@ -118,9 +125,9 @@
           eqnGen.simplify();
           eqnGen.buildMainEqn();
           var simplified = eqnGen.getMainEqn(), segregated = eqnGen.segregate();
-          log("Simplified : "+simplified+(simplified !== tc.simplified ? " : FAILED != "+tc.simplified:""));
-          log("Segregated : "+segregated+(segregated !== tc.segregated ? " : FAILED != "+tc.segregated:""));
-          //log("Code : "+eqnGen.getCode());
+          log("Simplified : "+simplified);//+(simplified !== tc.simplified ? " : FAILED != "+tc.simplified:""));
+          log("Segregated : "+segregated);//+(segregated !== tc.segregated ? " : FAILED != "+tc.segregated:""));
+          log("Code : "+eqnGen.getCode());
         }
       }
       function runTestCases() {
