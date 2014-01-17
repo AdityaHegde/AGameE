@@ -45,7 +45,7 @@
         }
       }
       if(!mainVars[mainTerm.var]) {
-        code = "var "+mainTerm.var+"="+mainEqn.getCode()+";";
+        code = "var "+mainTerm.getCode()+"="+mainEqn.getCode()+";";
       }
       else if(mainVars[mainTerm.var][2]) {
         var c = [new TermBracket({terms : []}), new TermBracket({terms : []}), new TermBracket({terms : []})];
@@ -75,38 +75,43 @@
         }
         if(!varsUsed.c2) code += "var ";
         code += "c0="+c[0].getCode()+",c1="+c[1].getCode()+",c2="+c[2].getCode()+"," +
-                "a=c1*c1-4*c0*c2;if(a<0||c0===0) return null;a=Math.sqrt(a);var "+mainTerm.var+"1=(-c1+2*a)/c0,"+mainTerm.var+"2=(-c1-2*a)/c0;";
+                "a=c1*c1-4*c0*c2;if(a<0||c1===0) return result;a=Math.sqrt(a);var "+mainTerm.getCode()+"1=(-c1+2*a)/c0,"+mainTerm.getCode()+"2=(-c1-2*a)/c0;";
         varsUsed.c0 = 1;
         varsUsed.c1 = 1;
         varsUsed.c2 = 1;
-        var solvables = [];
-        for(var i = 0; i < vars.length; i++) {
-          if(vars[i] === 0) continue;
-          var unkns = 0, unkn;
-          for(var v in vars[i]) {
-            if(unknowns[v]) {
-              unkns++;
-              unkn = v;
+        var codes = [];
+        delete unknowns[mainTerm.var];
+        while(true) {
+          var solvables = [];
+          for(var i = 0; i < vars.length; i++) {
+            if(vars[i] === 0) continue;
+            var unkns = 0, unkn;
+            for(var v in vars[i]) {
+              if(unknowns[v]) {
+                unkns++;
+                unkn = v;
+              }
+            }
+            if(unkns === 0) {
+              solvables.push(i);
             }
           }
-          if(unkns === 0) {
-            solvables.push(i);
-          }
-        }
-        if(solvables.length > 0) {
-          var codes = [];
+          if(solvables.length === 0) break;
           for(var j = 0; j < solvables.length; j++) {
             var mainEqn1 = eqns[solvables[j]],
                 mainTerm1 = lhsVars1[solvables[j]];
             eqns[solvables[j]] = 0;
             lhsVars[solvables[j]] = 0;
+            vars[solvables[j]] = 0;
             delete unknowns[mainTerm1.var];
             if(!mainEqn1.segregated) mainEqn1.segregate(mainTerm1);
             mainEqn1.getVars(unknowns);
             codes.push(window.EqnSolver.solve_single_var_master(eqns, mainTerm1, mainEqn1, unknowns, lhsVars, varsUsed));
           }
+        }
+        if(codes.length > 0) {
           for(var i = 0; i < 2; i++) {
-            code += mainTerm.var+"="+mainTerm.var+i+";";
+            code += mainTerm.var+"="+mainTerm.var+(i+1)+";";
             for(var j = 0; j < codes.length; j++) {
               code += codes[j];
             }
@@ -115,7 +120,7 @@
         }
       }
       else if(mainVars[mainTerm.var][1]) {
-        code = "var "+mainTerm.var+"="+mainEqn.getCode()+";";
+        code = "var "+mainTerm.getCode()+"="+mainEqn.getCode()+";";
       }
       else {
       }

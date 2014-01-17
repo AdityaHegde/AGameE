@@ -316,7 +316,8 @@
         t = this.copy();
         t.coeff = 1;
         if(pwr && this.pwr > pwr) {
-          this.pwr -= this.pwr;
+          this.pwr -= pwr;
+          t.pwr = pwr;
         }
         else {
           this.var = "";

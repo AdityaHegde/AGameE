@@ -122,7 +122,7 @@
 
                     /* Check for collision with edge */
 
-                    var dd = line.perpPointFromLine(v1, face.v[ni], dir, this.pos, this.d.r), pdd, dd1, pdd1, pter, ptei = 0;
+                    var dd = line.perpPointFromLine(dir, this.pos, v1, face.v[ni], this.d.r), pdd, dd1, pdd1, pter, ptei = 0;
                     for(var i in dd) {
                       if(dd[i][0] >= 0.0 && dd[i][0] <= 1.0 && (!pdd || pdd > dd[i][0])) {
                         pter = dd[i][1];
