@@ -3,7 +3,7 @@ vec3.angle = function (a, b) {
 };
 
 vec3.project = function(a, b, c) {
-  (c||c=a);
+  c ? c : c = a;
   vec3.scale(c, vec3.dot(a, b));
   return c;
 };

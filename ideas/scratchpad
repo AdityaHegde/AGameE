@@ -1,0 +1,11 @@
+Model
+
+Entity - Any object that can exist independently
+  DyanmicEntity - an entity that changes state
+    DependantEntity - a DyanmicEntity that changes state from an external force, all non intelligent DyanmicEntities
+    IndependantEntity - AI, DyanmicEntity that changes state by itself
+  StaticEntity - entity that never changes state, boundries of the world.
+
+
+
+State Machine - 
